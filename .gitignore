@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+Data
+
+
+#To remove tracked files use:
+#git rm --cached <file>
+#or
+#git rm -r --cached <folder>
