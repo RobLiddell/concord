@@ -1,0 +1,101 @@
+---
+title: "Concordance Data Summary 2021-11-26"
+author: "Robert Liddell"
+date: "2021-11-26"
+output: 
+  word_document:
+    #reference_docx: "template.docx"
+    toc: TRUE
+    toc_depth: 2
+params:
+  summaryFile: "Code/dataChecking/01_dataSummarizer.R"
+  knitChildFile: "Code/dataChecking/03_dataSummaryChildren.R"
+  printFirstNSummaries: 3
+---
+
+# Summary
+-   Summary of the following variables found in the Concordance Study
+
+```{r setup and establish connections, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+
+source(params$summaryFile)
+
+
+```
+
+
+
+```{r Create Graphics}
+
+addGraphLabels <- function(plot,graphLabels){
+  graphLabels <- graphLabels %>% 
+    group_by(name,value) %>% 
+    summarise(vis_id=list(vis_id),.groups='drop') %>% 
+    rowwise() %>% 
+    mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
+    ungroup()
+    
+  
+  p <- plot+
+    geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
+               hjust = 0)
+  return(p)
+}
+
+
+dataSummary <- dataSummary %>% 
+  unnest(summaryOutput) %>% 
+  mutate(labeledPlot=map2(plot,lowCountIds,addGraphLabels)) %>% 
+  nest(summaryOutput=c(plot,lowCountIds))
+
+
+```
+
+
+```{r documentCreation, results='asis'}
+
+
+sectionKnit <- function(x){
+  knitr::knit_child(text = c(
+    '## `r x`',
+    '',
+    '```{r}',
+    'dataSummary %>%
+    filter(`myLabel `== x) %>% 
+    select(labeledPlot) %>%  
+    pull(labeledPlot) %>% 
+    .[[1]]',
+    '```',
+    ''
+  ), envir = environment(), quiet = TRUE)
+}
+
+formKnit <- function(form){
+  # knitr::knit_child(param$knitChildFile, envir = environment(), quiet = TRUE)
+  knitr::knit_child(text = c(
+    '# `r form %>% str_replace_all("_"," ") %>% str_to_title()`',
+    '',
+    '```{r, results="asis"}',
+    'sectionRes <- dataSummary %>%
+    filter(source == form) %>%
+    pull(`myLabel `) %>%
+    map(sectionKnit)\n',
+    'cat(unlist(sectionRes), sep = "\n")',
+    '```',
+    ''
+  ), envir = environment(), quiet = TRUE) %>% 
+    return()
+}
+
+
+res <- dataSummary %>% 
+  distinct(source) %>% 
+  slice(1:2) %>%
+  pull(source) %>% 
+  map(formKnit)
+  
+cat(unlist(res), sep = '\n')
+
+```
+
