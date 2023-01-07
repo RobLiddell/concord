@@ -4,23 +4,22 @@ author: "Robert Liddell"
 date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output: 
   word_document:
-    #reference_docx: "template.docx"
+    reference_docx: template.docx
     toc: TRUE
     toc_depth: 2
 params:
-  summaryFile: "Code/dataChecking/01_dataSummarizer.R"
-  knitChildFile: "Code/dataChecking/03_dataSummaryChildren.R"
-  printFirstNSummaries: 3
+  summaryFile: Code/dataChecking/01_dataSummarizer.R
+
 ---
 
 # Summary
 -   Summary of selected variables found in the Concordance Study for Data Cleaning
 
 ```{r setup and establish connections, include=FALSE}
+
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
 
 source(params$summaryFile)
-
 
 ```
 
