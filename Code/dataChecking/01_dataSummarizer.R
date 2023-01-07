@@ -65,9 +65,15 @@ formatDataLabels <- function(values){
 }
 
 plotSummarizer <- function(data,variableLabel,graphLabels){
+
+
+  dataBreaks <- data$value %>% 
+    levels()
+  
   p <- data %>% 
     ggplot(aes(y=value,fill=value)) +
     scale_fill_grey(guide='none')+
+    scale_y_discrete(drop=FALSE)+
     geom_bar()+
     facet_grid(rows=vars(name))+
     labs(x='Count', y=variableLabel)
@@ -81,7 +87,7 @@ plotSummarizer <- function(data,variableLabel,graphLabels){
     ungroup()
   
   
-  p <- plot+
+  p <- p+
     geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
               hjust = 0)
   
@@ -92,8 +98,15 @@ plotSummarizer <- function(data,variableLabel,graphLabels){
 tableSummarizer <- function(idValues){
   idValues %>% 
     select(vis_id,value) %>% 
-    mutate(vis_id=as.character(vis_id)) %>% 
-    flextable()
+    mutate(vis_id=as.character(vis_id),
+           value=str_replace_all(value,'\n','->')) %>%
+    group_by(value) %>% 
+    summarise(vis_id=vis_id %>% str_flatten(collapse=', ') ) %>% 
+    select(vis_id,value) %>% 
+    arrange(value) %>% 
+    flextable() %>% 
+    width(2,5) %>% 
+    width(1,3) 
 }
 
 
@@ -106,107 +119,71 @@ getData <- function(data,variableName,instrumentLabel,dataType,values){
   
   if(dataType=='01'){
     
-    checkBoxVariables <- str_split_1(values,',') %>%
-      {paste0(variableName,'___',.)}
+    checkBoxVariables <- paste0(variableName,'___',values)
 
     returnDat <- data %>%
       filter(redcap_repeat_instrument==instrumentLabel) %>%
-      select(ord,vis_id,all_of(checkBoxVariables))
+      select(ord,vis_id,all_of(checkBoxVariables)) %>% 
+      mutate(across(all_of(checkBoxVariables),~as.numeric(.x))) %>% 
+      pivot_longer(cols=all_of(checkBoxVariables))
     
-    return(returnDat)
-    
+  }else{
+    returnDat <- filter(data,redcap_repeat_instrument==instrumentLabel) %>% 
+      select(ord,vis_id,all_of(variableName)) %>% 
+      pivot_longer(cols=all_of(variableName))
   }
-  
-  returnDat <- filter(data,redcap_repeat_instrument==instrumentLabel) %>% 
-    select(ord,vis_id,all_of(variableName))
   
   return(returnDat)
 }
 
 ####Summary Data Formatting####
 
-formatSummaryData <- function(data,dataType,columns,variableValues,dataLabels){
-  #Change data type to match data
-  if(dataType %in% c('$')){
-    data <- data %>% 
-      mutate(across(all_of(columns),~as.character(.x))) %>% 
-      pivot_longer(cols=all_of(columns))
+formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabels){
+  
+  if(dataType == '01'){
     
-  }else if(dataType %in% c('01')){
-    data <- data %>% 
-      mutate(across(all_of(columns),~as.numeric(.x))) %>% 
-      pivot_longer(cols=all_of(columns)) %>% 
-      mutate(name = factor(name,levels=columns,labels = dataLabels))
+    checkBoxVariables <- paste0(variableName,'___',variableValues)
     
-    
-  }else if(dataType %in% c('##')){
     data <- data %>% 
-      mutate(across(all_of(columns),~as.numeric(.x))) %>% 
-      pivot_longer(cols=all_of(columns))
-    
-  }else if(dataType %in% c('#')){
-    data <- data %>% 
-      mutate(across(all_of(columns),~as.integer(.x))) %>% 
-      pivot_longer(cols=all_of(columns))
-    
-  }else if(dataType %in% c('b0')){
-    data <- data %>% 
-      mutate(across(all_of(columns),~factor(.x,levels=variableValues,labels = dataLabels))) %>% 
-      pivot_longer(cols=all_of(columns))
-    
-  }else if(dataType %in% c('b')){
-    data <- data %>% 
-      mutate(across(all_of(columns),
-                    ~factor(.x,levels=variableValues,labels = dataLabels))) %>% 
-      pivot_longer(cols=all_of(columns))
-
+      mutate(name = factor(name,levels=checkBoxVariables,labels = dataLabels %>% str_wrap(11)))
   }
-  else if(dataType %in% c('dt')){
-    data <- data %>% 
-      mutate(across(all_of(columns),~ymd(.x))) %>% 
-      pivot_longer(cols=all_of(columns)) %>% 
-      mutate(value=as.numeric(value))
-  }
+  
+  
+  data$value <- switch (dataType,
+    `$` = data$value %>% as.character() %>% str_wrap(80) %>% factor(),
+    `01` = data$value %>% factor(levels=c(1,0)),
+    `##` = data$value %>% as.numeric(),
+    `#` = data$value %>%  as.integer(),
+    `dt` = data$value %>% ymd() %>% as.integer(),
+    `b` = data$value %>%  factor(levels=variableValues,labels = dataLabels) %>% str_wrap(11) %>% fct_rev(),
+    `b0` = data$value %>% factor(levels=variableValues,labels = variableValues) %>% fct_rev()
+    )
+  
   return(data)
 }
 
+####Cutting up Continuous Data####
+
+
+  
 
 
 
-#variableSummariesPlots takes data and returns an appropriate visual summary 
-#based on the data type
-variableSummaryPlot <- function(data, dataType, variableLabel,variableValues,shortcats,longcats,graphicType){
+dataCutting <- function(data,dataType){
   
-  #data should always have ord and vis_id
-  columns <- data %>% #columns will include the names for the other variables
-    colnames() %>% 
-    .[-(1:2)]
-  
-  
-  #Format data Labels
-  if(dataType%in%c('b','b0','01')){
-    variableValues <- variableValues %>% 
-      formatDataLabels()
-    
-    dataLabels <- switch(dataType,
-           b=formatDataLabels(shortcats),
-           `01`=formatDataLabels(shortcats),
-           b0=variableValues)
+  if(dataType%in%c('$','01','b','b0')){
+    return(data)
   }
   
-  data <- data %>% 
-    formatSummaryData(dataType,columns,variableValues, dataLabels)
-
-  #Arrange data in correct order for plotting
-  numberOfBins <- data %>% 
+  nGroups <- data %>% 
     distinct(value) %>% 
-    nrow() 
-  
-  if(numberOfBins>15 & !dataType%in%c('$')){
-    numberOfBins=15
+    pull(value) %>% 
+    length()
+
+  if(nGroups<=15){
+    
     data <- data %>% 
-      mutate(value=cut(value,numberOfBins),
-             value=fct_rev(value))
+      mutate(value=factor(value) %>% fct_rev())
     
     if(dataType=='dt'){
       levels(data$value) <- levels(data$value) %>% 
@@ -214,27 +191,33 @@ variableSummaryPlot <- function(data, dataType, variableLabel,variableValues,sho
         str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
         str_replace('[0-9]{5}',stringNumToDate)
     }
-    levels(data$value) <- levels(data$value) %>% 
-      str_remove_all('[\\(\\]]') %>% 
-      str_replace(',','\n') 
-      # {if_else(str_detect(.,'\n'),.,str_wrap(.,20))}
     
-    
-  }else{
-    data <- data %>% 
-      mutate(value=factor(value),
-             value=fct_rev(value))
-    if(dataType=='dt'){
-      levels(data$value) <- levels(data$value) %>% 
-        str_replace('[0-9]{5}',stringNumToDate)
-    }
-    # levels(data$value) <- levels(data$value) %>% 
-    #   {if_else(str_detect(.,'\n'),.,str_wrap(.,20))}
-      
-    
+    return(data)
   }
-
   
+  data <- data %>% 
+    mutate(value=cut(value,15),
+           value=fct_rev(value))
+  
+  if(dataType=='dt'){
+    levels(data$value) <- levels(data$value) %>% 
+      str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
+      str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
+      str_replace('[0-9]{5}',stringNumToDate)
+  }
+  levels(data$value) <- levels(data$value) %>% 
+    str_remove_all('[\\(\\]]') %>% 
+    str_replace(',','\n') 
+  
+  return(data)
+  
+}
+
+
+#variableSummariesPlots takes data and returns an appropriate visual summary 
+#based on the data type
+variableSummaryPlot <- function(data, variableLabel){
+
   lowCounts <- data %>% 
     group_by(name) %>% 
     count(value) %>% 
@@ -250,27 +233,33 @@ variableSummaryPlot <- function(data, dataType, variableLabel,variableValues,sho
   sumTable <- idsToAdd %>% 
     tableSummarizer()
 
-  
-
-
   tibble(summaryPlot=list(sumPlot),summaryTable=list(sumTable),lowCountIds=list(idsToAdd)) %>% 
   return()
 }
 
 ####Vars To Check####
-variableNumbers <- c(3:10,24,25:26,30,59,60:70,88:90,91:101,113:143,169:202)[1:5]
+variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)[1:5]
 
 ####Testing and Output####
 
-dataSummary <- dataDict %>% 
-  # slice(87) %>% 
-  slice(variableNumbers) %>%
-  mutate(rep=if_else(is.na(rep),'',source)) %>% 
-  mutate(dat=pmap(list(varnm,rep,tp,values),~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
-  mutate(summaryOutput=pmap(list(dat,tp,`myLabel `,values,shortcats,longcats,graphic),~variableSummaryPlot(..1,..2,..3,..4,..5,..6,..7)))
 
-dataSummary %>% 
-  select(summaryOutput) %>% 
-  unnest(summaryOutput) %>% 
-  .[[2]]
+dataDict %>% 
+  slice(variableNumbers) %>%
+  mutate(rep=if_else(is.na(rep),'',source),
+         values=str_remove_all(values,'\"') %>% str_split(','),
+         shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>% 
+  mutate(dat=pmap(list(varnm,rep,tp,values),
+                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
+  mutate(dat=pmap(list(dat,tp,varnm,values,shortcats),
+                  ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
+  mutate(dat=pmap(list(dat,tp),
+                  ~dataCutting(..1,..2))) %>% 
+  mutate(summaryOutput=pmap(list(dat,`myLabel `),
+                            ~variableSummaryPlot(..1,..2))) %>% 
+  select(summaryOutput,tp) %>% 
+  unnest(cols=summaryOutput) %>% 
+  pull(summaryPlot)
+
+  
+
 
