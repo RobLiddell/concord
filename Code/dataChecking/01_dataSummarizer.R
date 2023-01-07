@@ -95,7 +95,7 @@ plotSummarizer <- function(data,variableLabel,graphLabels){
   return(p)
 }
 
-tableSummarizer <- function(idValues){
+tableSummarizer <- function(idValues,variableLabel){
   idValues %>% 
     select(vis_id,value) %>% 
     mutate(vis_id=as.character(vis_id),
@@ -105,8 +105,9 @@ tableSummarizer <- function(idValues){
     select(vis_id,value) %>% 
     arrange(value) %>% 
     flextable() %>% 
-    width(2,5) %>% 
-    width(1,3) 
+    width(2,4.5) %>% 
+    width(1,2) %>% 
+    add_header_row(values=variableLabel,colwidths = 2)
 }
 
 
@@ -180,7 +181,7 @@ dataCutting <- function(data,dataType){
     pull(value) %>% 
     length()
 
-  if(nGroups<=15){
+  if(nGroups<=10){
     
     data <- data %>% 
       mutate(value=factor(value) %>% fct_rev())
@@ -196,7 +197,7 @@ dataCutting <- function(data,dataType){
   }
   
   data <- data %>% 
-    mutate(value=cut(value,15),
+    mutate(value=cut(value,10),
            value=fct_rev(value))
   
   if(dataType=='dt'){
@@ -214,9 +215,9 @@ dataCutting <- function(data,dataType){
 }
 
 
-#variableSummariesPlots takes data and returns an appropriate visual summary 
+#variableSummarizer takes data and returns an appropriate visual summary 
 #based on the data type
-variableSummaryPlot <- function(data, variableLabel){
+variableSummarizer <- function(data, variableLabel){
 
   lowCounts <- data %>% 
     group_by(name) %>% 
@@ -228,22 +229,29 @@ variableSummaryPlot <- function(data, variableLabel){
     filter(interaction(name,value)%in%interaction(lowCounts$name,lowCounts$value)) %>% 
     select(name,value,ord,vis_id)
   
-  sumPlot <- data %>% 
-    plotSummarizer(variableLabel,idsToAdd)
-  sumTable <- idsToAdd %>% 
-    tableSummarizer()
+  plotType='default'
+  tableType='default'
+  
+  figurePlot <- switch(plotType,
+         default=plotSummarizer(data,variableLabel,idsToAdd))
+  
+  
+  figureTable <- switch(tableType,
+                        default=tableSummarizer(idsToAdd,variableLabel))
 
-  tibble(summaryPlot=list(sumPlot),summaryTable=list(sumTable),lowCountIds=list(idsToAdd)) %>% 
+
+  tibble(summaryPlot=list(figurePlot),summaryTable=list(figureTable),lowCountIds=list(idsToAdd)) %>% 
   return()
 }
 
+
 ####Vars To Check####
-variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)[1:5]
+variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
 
 ####Testing and Output####
 
 
-dataDict %>% 
+dataSummary <- dataDict %>% 
   slice(variableNumbers) %>%
   mutate(rep=if_else(is.na(rep),'',source),
          values=str_remove_all(values,'\"') %>% str_split(','),
@@ -254,12 +262,12 @@ dataDict %>%
                   ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
   mutate(dat=pmap(list(dat,tp),
                   ~dataCutting(..1,..2))) %>% 
-  mutate(summaryOutput=pmap(list(dat,`myLabel `),
-                            ~variableSummaryPlot(..1,..2))) %>% 
-  select(summaryOutput,tp) %>% 
-  unnest(cols=summaryOutput) %>% 
-  pull(summaryPlot)
-
+  mutate(summaryOutput=pmap(list(dat,myLabel),
+                            ~variableSummarizer(..1,..2)))
   
+#summaryOutput
+#summaryPlot
+#summaryTable
+
 
 

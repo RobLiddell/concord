@@ -1,7 +1,7 @@
 ---
-title: "Concordance Data Summary 2021-11-26"
+title: "Concordance Data Summary as of 2021-11-26"
 author: "Robert Liddell"
-date: "2021-11-26"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
 output: 
   word_document:
     #reference_docx: "template.docx"
@@ -14,7 +14,7 @@ params:
 ---
 
 # Summary
--   Summary of the following variables found in the Concordance Study
+-   Summary of selected variables found in the Concordance Study for Data Cleaning
 
 ```{r setup and establish connections, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
@@ -26,50 +26,22 @@ source(params$summaryFile)
 
 
 
-```{r Create Graphics}
-
-# addGraphLabels <- function(plot,graphLabels){
-#   graphLabels <- graphLabels %>% 
-#     group_by(name,value) %>% 
-#     summarise(vis_id=list(vis_id),.groups='drop') %>% 
-#     rowwise() %>% 
-#     mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
-#     ungroup()
-#     
-#   
-#   p <- plot+
-#     geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
-#                hjust = 0)
-#   return(p)
-# }
-# 
-# 
-# dataSummary <- dataSummary %>% 
-#   unnest(summaryOutput) %>% 
-#   mutate(labeledPlot=map2(plot,lowCountIds,addGraphLabels)) %>% 
-#   nest(summaryOutput=c(plot,lowCountIds))
-
-
-
-
-
-```
-
-
 ```{r documentCreation, results='asis'}
 
 
 
 sectionKnit <- function(x){
   knitr::knit_child(text = c(
-    '## `r x`',
+    '## `r filter(dataSummary,varnm==x) %>% pull(myLabel)`',
     '',
     '```{r}',
-    'dataSummary %>%
-    filter(`myLabel `== x) %>% 
-    select(summaryOutput) %>% 
-    unnest(summaryOutput) %>%  
-    pull(summary) %>% 
+    'summaryRow <- dataSummary %>%
+    filter(varnm == x) %>% 
+    unnest(summaryOutput)',
+    '',
+    'switch(summaryRow$graphic,
+    defaultPlot=summaryRow %>% pull(summaryPlot),
+    defaultTable=summaryRow %>% pull(summaryTable)) %>% 
     .[[1]]',
     '```',
     ''
@@ -84,7 +56,7 @@ formKnit <- function(form){
     '```{r, results="asis"}',
     'sectionRes <- dataSummary %>%
     filter(source == form) %>%
-    pull(`myLabel `) %>%
+    pull(varnm) %>%
     map(sectionKnit)\n',
     'cat(unlist(sectionRes), sep = "\n")',
     '```',
@@ -96,7 +68,6 @@ formKnit <- function(form){
 
 res <- dataSummary %>% 
   distinct(source) %>% 
-  slice(1:2) %>%
   pull(source) %>% 
   map(formKnit)
   
