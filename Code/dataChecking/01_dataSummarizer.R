@@ -2,6 +2,8 @@ library(tidyverse)
 library(lubridate)
 library(stringr)
 library(openxlsx2)
+library(flextable)
+
 
 
 ####DATA CHECKING STEPS####
@@ -33,6 +35,15 @@ dataDict <- read_xlsx(dataDictLoc,
 
 currentDate=ymd('2021-11-26')
 
+#ConcordanceStudy Summary Graphic Type
+dataGraphicTypeLoc <- 'Data/meta/03 CONCORD REDCap Summary Type.xlsx'
+
+dataDict <- read_xlsx(dataGraphicTypeLoc,
+                         sheet=1,
+                         skipEmptyRows = TRUE,
+                         skipEmptyCols = TRUE) %>% 
+  tibble() %>% 
+  {left_join(dataDict,.)}
 
 ####Helper Functions####
 
@@ -52,6 +63,39 @@ formatDataLabels <- function(values){
     str_wrap(11) %>% 
     return()
 }
+
+plotSummarizer <- function(data,variableLabel,graphLabels){
+  p <- data %>% 
+    ggplot(aes(y=value,fill=value)) +
+    scale_fill_grey(guide='none')+
+    geom_bar()+
+    facet_grid(rows=vars(name))+
+    labs(x='Count', y=variableLabel)
+
+  
+  graphLabels <- graphLabels %>% 
+    group_by(name,value) %>% 
+    summarise(vis_id=list(vis_id),.groups='drop') %>% 
+    rowwise() %>% 
+    mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
+    ungroup()
+  
+  
+  p <- plot+
+    geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
+              hjust = 0)
+  
+  
+  return(p)
+}
+
+tableSummarizer <- function(idValues){
+  idValues %>% 
+    select(vis_id,value) %>% 
+    mutate(vis_id=as.character(vis_id)) %>% 
+    flextable()
+}
+
 
 ####getData Function####
 
@@ -131,7 +175,7 @@ formatSummaryData <- function(data,dataType,columns,variableValues,dataLabels){
 
 #variableSummariesPlots takes data and returns an appropriate visual summary 
 #based on the data type
-variableSummaryPlot <- function(data, dataType, variableLabel,variableValues,shortcats,longcats){
+variableSummaryPlot <- function(data, dataType, variableLabel,variableValues,shortcats,longcats,graphicType){
   
   #data should always have ord and vis_id
   columns <- data %>% #columns will include the names for the other variables
@@ -200,80 +244,33 @@ variableSummaryPlot <- function(data, dataType, variableLabel,variableValues,sho
   idsToAdd <- data %>% 
     filter(interaction(name,value)%in%interaction(lowCounts$name,lowCounts$value)) %>% 
     select(name,value,ord,vis_id)
-
-
-  p <- data %>% 
-    ggplot(aes(y=value,fill=value)) +
-    scale_fill_grey(guide='none')+
-    geom_bar()+
-    facet_grid(rows=vars(name))+
-    labs(x='Count', y=variableLabel)
   
-  tibble(plot=list(p),lowCountIds=list(idsToAdd)) %>% 
+  sumPlot <- data %>% 
+    plotSummarizer(variableLabel,idsToAdd)
+  sumTable <- idsToAdd %>% 
+    tableSummarizer()
+
+  
+
+
+  tibble(summaryPlot=list(sumPlot),summaryTable=list(sumTable),lowCountIds=list(idsToAdd)) %>% 
   return()
 }
 
-
-
-
-dataTable <- function(variable,dataDict){
-  dataDict %>% 
-    filter(varnm %in% variable) %>% 
-    mutate(rep=if_else(is.na(rep),'',source)) %>% 
-    pull(rep) %>% 
-    return()
-}
-
-
-dateCheck <- function(value,after=NULL,before=NULL){
-  dates <- value %>% 
-    ymd() %>%
-    tibble() %>% 
-    mutate(check=TRUE)
-  
-  if(!is.null(after)){
-    dates <- dates %>%
-      mutate(check=check&.>{{after}}) 
-  }
-  
-  if(!is.null(before)){
-    dates <- dates %>%
-      mutate(check=check&.<{{before}})
-  }
-  
-  dates %>% 
-    pull(check) %>%
-    return()
-}
-
-defaultChecker <- function(value){
-  return(FALSE)
-}
-
-checkerChooser <-  function(variableType){
-  switch(variableType,
-         dt=dateCheck) %>% 
-    return()
-}
-
-
 ####Vars To Check####
-variableNumbers <- c(3:10,24,25:26,30,59,60:70,88:90,91:101,113:143,169:202)
+variableNumbers <- c(3:10,24,25:26,30,59,60:70,88:90,91:101,113:143,169:202)[1:5]
 
 ####Testing and Output####
 
-variableInfo <- dataDict %>% 
-  slice(87) %>% 
-  # slice(variableNumbers) %>%
+dataSummary <- dataDict %>% 
+  # slice(87) %>% 
+  slice(variableNumbers) %>%
   mutate(rep=if_else(is.na(rep),'',source)) %>% 
-  mutate(dat=pmap(list(varnm,rep,tp,values),~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))
-
-
-dataSummary <- variableInfo %>% 
-  mutate(summaryOutput=pmap(list(dat,tp,`myLabel `,values,shortcats,longcats),~variableSummaryPlot(..1,..2,..3,..4,..5,..6)))
-
+  mutate(dat=pmap(list(varnm,rep,tp,values),~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
+  mutate(summaryOutput=pmap(list(dat,tp,`myLabel `,values,shortcats,longcats,graphic),~variableSummaryPlot(..1,..2,..3,..4,..5,..6,..7)))
 
 dataSummary %>% 
+  select(summaryOutput) %>% 
   unnest(summaryOutput) %>% 
-  select(plot) %>% 
-  .[[1]]
+  .[[2]]
+

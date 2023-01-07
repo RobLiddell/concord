@@ -28,32 +28,36 @@ source(params$summaryFile)
 
 ```{r Create Graphics}
 
-addGraphLabels <- function(plot,graphLabels){
-  graphLabels <- graphLabels %>% 
-    group_by(name,value) %>% 
-    summarise(vis_id=list(vis_id),.groups='drop') %>% 
-    rowwise() %>% 
-    mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
-    ungroup()
-    
-  
-  p <- plot+
-    geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
-               hjust = 0)
-  return(p)
-}
+# addGraphLabels <- function(plot,graphLabels){
+#   graphLabels <- graphLabels %>% 
+#     group_by(name,value) %>% 
+#     summarise(vis_id=list(vis_id),.groups='drop') %>% 
+#     rowwise() %>% 
+#     mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
+#     ungroup()
+#     
+#   
+#   p <- plot+
+#     geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
+#                hjust = 0)
+#   return(p)
+# }
+# 
+# 
+# dataSummary <- dataSummary %>% 
+#   unnest(summaryOutput) %>% 
+#   mutate(labeledPlot=map2(plot,lowCountIds,addGraphLabels)) %>% 
+#   nest(summaryOutput=c(plot,lowCountIds))
 
 
-dataSummary <- dataSummary %>% 
-  unnest(summaryOutput) %>% 
-  mutate(labeledPlot=map2(plot,lowCountIds,addGraphLabels)) %>% 
-  nest(summaryOutput=c(plot,lowCountIds))
+
 
 
 ```
 
 
 ```{r documentCreation, results='asis'}
+
 
 
 sectionKnit <- function(x){
@@ -63,8 +67,9 @@ sectionKnit <- function(x){
     '```{r}',
     'dataSummary %>%
     filter(`myLabel `== x) %>% 
-    select(labeledPlot) %>%  
-    pull(labeledPlot) %>% 
+    select(summaryOutput) %>% 
+    unnest(summaryOutput) %>%  
+    pull(summary) %>% 
     .[[1]]',
     '```',
     ''
