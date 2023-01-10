@@ -181,7 +181,7 @@ dataCutting <- function(data,dataType){
     pull(value) %>% 
     length()
 
-  if(nGroups<=10){
+  if(nGroups<=11){
     
     data <- data %>% 
       mutate(value=factor(value) %>% fct_rev())
@@ -197,7 +197,7 @@ dataCutting <- function(data,dataType){
   }
   
   data <- data %>% 
-    mutate(value=cut(value,10),
+    mutate(value=cut(value,11),
            value=fct_rev(value))
   
   if(dataType=='dt'){
@@ -270,4 +270,8 @@ dataSummary <- dataDict %>%
 #summaryTable
 
 
-
+dataDict %>% 
+  filter(source == 'tumor_char_detail') %>% 
+  slice(1) %>% 
+  pull(rep) %>% 
+  {!is.na(.)}

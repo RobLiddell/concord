@@ -1,7 +1,5 @@
 ---
-title: "Concordance Data Summary as of 2021-11-26"
-author: "Robert Liddell"
-date: "`r format(Sys.time(), '%Y-%m-%d')`"
+title: "Concordance Data Summary as of 2022-12-30"
 output: 
   word_document:
     reference_docx: template.docx
@@ -13,7 +11,7 @@ params:
 ---
 
 # Summary
--   Summary of selected variables found in the Concordance Study for Data Cleaning
+-   Summary of selected variables found in the Concordance Study for cleaning of data downloaded the 30 of December 2022.
 
 ```{r setup and establish connections, include=FALSE}
 
@@ -50,9 +48,27 @@ sectionKnit <- function(x){
 formKnit <- function(form){
   # knitr::knit_child(param$knitChildFile, envir = environment(), quiet = TRUE)
   knitr::knit_child(text = c(
-    '# `r form %>% str_replace_all("_"," ") %>% str_to_title()`',
+    '```{r}',
+    'isRepeated <- dataDict %>% 
+    filter(source == form) %>% 
+    slice(1) %>% 
+    pull(rep) %>% 
+    {!is.na(.)}',
+    'formName <- form %>% str_replace_all("_"," ") %>% str_to_title()',
+    'if(isRepeated){',
+      'formName <- paste0(formName," (Repeated Form)")',
+    '}',
+    '```',
+    '',
+    '',
+    '',
+    '# `r formName`',
     '',
     '```{r, results="asis"}',
+    '',
+    '',
+    '',
+    
     'sectionRes <- dataSummary %>%
     filter(source == form) %>%
     pull(varnm) %>%
