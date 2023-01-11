@@ -126,7 +126,8 @@ compareSurgDates <- function(data){
   formData <- data %>% 
     filter(redcap_repeat_instrument=='') %>% 
     select(vis_id,vis_dobiop,cor_dobiop) %>% 
-    mutate(vis_dobiop = as.character(vis_dobiop) %>% ymd(),
+    mutate(vis_id=as.character(vis_id),
+           vis_dobiop = as.character(vis_dobiop) %>% ymd(),
            cor_dobiop = as.character(cor_dobiop) %>% ymd()) %>% 
     filter(!(vis_dobiop==cor_dobiop)|is.na(vis_dobiop)|is.na(cor_dobiop))
   
