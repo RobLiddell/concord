@@ -274,65 +274,6 @@ if(FALSE){
   variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
   
   
-  tibble(varnm=colnames(data)) %>% 
-    mutate(row=row_number())
-
-  
-  
-  
-  dataTypeChanging %$%
-    pwalk(list(varnm,tp,values,shortcats,row),~dataTableTyper(..1,..2,..3,..4))
-  
-  data
-
-dataTableTyper <- function(varnm,tp,values,shortcats,row){
-  data %<>%
-    mutate('{{varnm}}':=dataTransform(varnm,tp,values,shortcats))
-}
-  
-dataTransform <- function(varnm,dataType,variableValues,variableLabels){
-  data[varnm] <- switch (dataType,
-                        `$` = data[[varnm]] %>% as.character() %>% str_wrap(20) %>% factor(),
-                        `01` =data[[varnm]] %>% factor(levels=c(1,0),labels=c(variableLabels,'0')),
-                        `##` = data[[varnm]] %>% as.numeric(),
-                        `#` = data[[varnm]] %>%  as.integer(),
-                        `dt` = data[[varnm]] %>% ymd() %>% as.integer(),
-                        `b` = data[[varnm]] %>%  factor(levels=variableValues,labels = variableLabels) %>% str_wrap(11) %>% fct_rev(),
-                        `b0` = data[[varnm]] %>% factor(levels=variableValues,labels = variableValues) %>% fct_rev()
-  )
-  return(data[varnm])
-  
-}
-
-
-  data %>% 
-    mutate(across(dataTypeChanging$row[dataTypeChanging$tp=='$'][[1]],as.character),
-           across(dataTypeChanging$row[dataTypeChanging$tp=='#'][[1]],as.integer),
-           across(dataTypeChanging$row[dataTypeChanging$tp=='##'][[1]],as.numeric),
-           across(dataTypeChanging$row[dataTypeChanging$tp=='dt'][[1]],~.x %>% ymd() %>% as.integer()),
-           across(dataTypeChanging$row[dataTypeChanging$tp=='b'][[1]],~factor(.x)),
-           across(dataTypeChanging$row[dataTypeChanging$tp=='b0'][[1]],~factor(.x)),
-           across(dataTypeChanging$row[dataTypeChanging$tp=='01'][[1]],~factor(.x,levels=c(1,0))))
-  
-  
-dataFactorFormatter <- function(data,colName,variableValues,variableLabels){
-  data %>% 
-    mutate("{{colName}}":=factor(.data[[colName]],variableValues,variableLabels))
-}
-
-  data %>% 
-    
-  
-  
-  
-  dataDict %>% 
-    select(varnm,tp,values) %>% 
-    mutate(values=str_remove_all(values,'\"') %>% str_split(',')) %>% 
-    mutate(varnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) paste0(.x,'___',.y)),map(varnm,function(.x) list(.x)))) %>% 
-    group_by(tp)
-  
-  
-  
 dataSummary <- dataDict %>% 
   slice(variableNumbers) %>%
   mutate(rep=if_else(is.na(rep),'',source),
@@ -347,16 +288,6 @@ dataSummary <- dataDict %>%
   mutate(summaryOutput=pmap(list(dat,myLabel),
                             ~variableSummarizer(..1,..2)))
   
-#summaryOutput
-#summaryPlot
-#summaryTable
-
-
-dataDict %>% 
-  filter(source == 'tumor_char_detail') %>% 
-  slice(1) %>% 
-  pull(rep) %>% 
-  {!is.na(.)}
 }
 
 

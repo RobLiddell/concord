@@ -123,18 +123,22 @@ dataSummary <- dataSummary %>%
 ```{r Adding specific Tables}
 
 compareSurgDates <- function(data){
-  summaryTable <- data %>% 
+  formData <- data %>% 
     filter(redcap_repeat_instrument=='') %>% 
     select(vis_id,vis_dobiop,cor_dobiop) %>% 
     mutate(vis_dobiop = as.character(vis_dobiop) %>% ymd(),
            cor_dobiop = as.character(cor_dobiop) %>% ymd()) %>% 
-    filter(!(vis_dobiop==cor_dobiop)|is.na(vis_dobiop)|is.na(vor_dobiop)) %>% 
+    filter(!(vis_dobiop==cor_dobiop)|is.na(vis_dobiop)|is.na(cor_dobiop))
+  
+  
+  
+  summaryTable <- formData %>% 
     flextable() %>% 
-    add_header_row(values=source,colwidths = (ncol(formData)-1)) %>% 
-    width(c(1:(ncol(formData)-1)),width=7/(ncol(formData)-1)) %>% 
+    add_header_row(values='Surgery Biopsy Date Comparison',colwidths = ncol(formData)) %>% 
+    width(c(1:(ncol(formData))),width=7/(ncol(formData))) %>% 
     bg(i=seq(1,nrow(formData),2),bg='grey90')
   
-  return(summaryTable)
+  return(list(summaryTable))
 }
 
 concatinatedDataTable <- function(data, dataDict){
@@ -143,6 +147,8 @@ concatinatedDataTable <- function(data, dataDict){
   groupedSyms <- groupedVars %>% 
     map(as.symbol)
   
+  groupedValues <- c(1,2,3)
+  groupedLabels <- c('Yes','No','Unk')
 
   
   summaryData <- data %>% 
@@ -154,7 +160,8 @@ concatinatedDataTable <- function(data, dataDict){
               vis_id=str_flatten(vis_id,', '),.groups = 'drop') %>% 
     ungroup() %>% 
     arrange(firstID) %>% 
-    select(vis_id,all_of(groupedVars)) 
+    select(vis_id,all_of(groupedVars)) %>% 
+    mutate(cor_onctrt_asmets=factor(cor_onctrt_asmets,levels=groupedValues,labels=groupedLabels))
   
   
   renameList <- dataDict %>% 
@@ -164,21 +171,50 @@ concatinatedDataTable <- function(data, dataDict){
   summaryTable <- summaryData %>% 
     rename(!!renameList) %>% 
     flextable() %>% 
-    add_header_row(values='Treatment Plan Details',colwidths = (ncol(summaryData))) %>% 
+    add_header_row(values='Treatment Plan Details',colwidths = ncol(summaryData)) %>% 
     width(1,2) %>% 
     width(c(2:(ncol(summaryData))),width=5/(ncol(summaryData)-1)) %>%
     bg(i=seq(1,nrow(summaryData),2),bg='grey90')
   
-  return(summaryTable)
+  return(list(summaryTable))
 }
 
 
-# data %>% 
-#   concatinatedDataTable(dataDict)
+extra1 <- dataSummary %>% 
+  slice(n()) %>% 
+  mutate(ord=ord+1,
+         rep='',
+         varnm='Surgery_Biopsy_Date_Comparison',
+         source='Additional_Checks',
+         graphic='defaultTable',
+         myLabel='Surgery_Biopsy_Date_Comparison') %>%
+  unnest(summaryOutput) %>% 
+  mutate(summaryTable=compareSurgDates(data)) %>% 
+  nest(summaryOutput=c(summaryPlot,summaryTable,lowCountIds))
+  
+  
+extra2 <- dataSummary %>% 
+  slice(n()) %>% 
+  mutate(ord=ord+2,
+         rep='',
+         varnm='Q47_Oncologist_Treatment_Plan',
+         source='Additional_Checks',
+         graphic='defaultTable',
+         myLabel='Q47_Oncologist_Treatment_Plan') %>%
+  unnest(summaryOutput) %>% 
+  mutate(summaryTable=concatinatedDataTable(data,dataDict)) %>% 
+  nest(summaryOutput=c(summaryPlot,summaryTable,lowCountIds))
+
+dataSummary <- dataSummary %>% 
+  bind_rows(extra1,extra2)
 
 
-
-
+dataDict <- dataDict %>% 
+  slice(n()) %>% 
+  mutate(ord=ord+1,
+         source='Additional_Checks',
+         rep=as.character(NA)) %>% 
+  {bind_rows(dataDict,.)}
 ```
 
 
