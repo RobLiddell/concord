@@ -81,6 +81,12 @@ getDataFullTable <- function(data,dataDict,instrumentLabel){
     select(ord,vis_id,all_of(instrumentVariables)) %>% 
     rename(!!renameList)
   
+  if(instrumentLabel=='blood_biomarker_results'){
+    returnDat <- returnDat %>% 
+      mutate(`Biomarker name`=factor(`Biomarker name`,
+                                     levels=c(1,2,9),labels=c("CA15-3","CEA","Other")))
+  }
+  
   return(returnDat)
 }
 
