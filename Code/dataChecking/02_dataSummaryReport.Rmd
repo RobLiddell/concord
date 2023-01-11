@@ -7,10 +7,10 @@ output:
     toc_depth: 2
 params:
   summaryFile: Code/dataChecking/01_dataSummarizer.R
-
 ---
 
 # Summary
+
 -   Summary of selected variables found in the Concordance Study for cleaning of data downloaded the 30 of December 2022.
 
 ```{r setup and establish connections, include=FALSE}
@@ -18,12 +18,172 @@ params:
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
 
 source(params$summaryFile)
+library(magrittr)
+```
+
+```{r Basic Data Formatting}
+
+
+variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
+
+
+dataSummary <- dataDict %>% 
+  slice(variableNumbers) %>%
+  mutate(rep=if_else(is.na(rep),'',source),
+         values=str_remove_all(values,'\"') %>% str_split(','),
+         shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>% 
+  mutate(dat=pmap(list(varnm,rep,tp,values),
+                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
+  mutate(dat=pmap(list(dat,tp,varnm,values,shortcats),
+                  ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
+  mutate(dat=pmap(list(dat,tp),
+                  ~dataCutting(..1,..2))) %>% 
+  mutate(summaryOutput=pmap(list(dat,myLabel),
+                            ~variableSummarizer(..1,..2)))
+
+
+
+
+
+
+
+```
+
+```{r Adding Full Data Tables}
+
+#Remove extra rows from dataSummary to only include the first row from
+#each source in replaceWithTable
+replaceWithTable <- c('blood_biomarker_results','fup_mets_treatment')
+
+dataSummary <- dataSummary %>% 
+  group_by(source) %>% 
+  mutate(rnm=row_number()) %>% 
+  ungroup() %>% 
+  filter(!(source%in%replaceWithTable&rnm>1)) %>% 
+  select(-rnm)
+
+
+
+getDataFullTable <- function(data,dataDict,instrumentLabel){
+  
+  instrumentVariables <- dataDict %>% 
+    filter(source==instrumentLabel) %>%
+    pull(varnm)
+  
+  newVariableNames <- dataDict %>% 
+    filter(source==instrumentLabel) %>%
+    pull(myLabel)
+  
+  renameList <- setNames(instrumentVariables,newVariableNames)
+  
+  returnDat <- data %>% 
+    filter(redcap_repeat_instrument%in%instrumentLabel) %>% 
+    select(ord,vis_id,all_of(instrumentVariables)) %>% 
+    rename(!!renameList)
+  
+  return(returnDat)
+}
+
+formTable <- function(formData,source){
+  
+  summaryTable <- formData %>%
+    select(-ord) %>% 
+    arrange(vis_id) %>% 
+    mutate(vis_id=as.character(vis_id)) %>% 
+    flextable() %>% 
+    add_header_row(values=source,colwidths = (ncol(formData)-1)) %>% 
+    width(c(1:(ncol(formData)-1)),width=7/(ncol(formData)-1)) %>% 
+    bg(i=seq(1,nrow(formData),2),bg='grey90')
+  
+  return(summaryTable)
+}
+
+
+replacementTables <- dataSummary %>% 
+  filter(source%in%replaceWithTable) %>% 
+  unnest(summaryOutput) %>% 
+  mutate(dat=map(source,
+                 ~getDataFullTable(data,dataDict,.x)),
+         summaryTable=map2(dat,source,
+                           ~formTable(.x,.y)),
+         myLabel='Data Table',
+         graphic='defaultTable') %>% 
+  nest(summaryOutput=c(summaryPlot,summaryTable,lowCountIds))
+
+
+#SummaryOutput=summaryPlot,summaryTable,lowCountIds
+
+dataSummary <- dataSummary %>%
+  rows_update(replacementTables, by='ord')
+
+
+```
+
+
+```{r Adding specific Tables}
+
+compareSurgDates <- function(data){
+  summaryTable <- data %>% 
+    filter(redcap_repeat_instrument=='') %>% 
+    select(vis_id,vis_dobiop,cor_dobiop) %>% 
+    mutate(vis_dobiop = as.character(vis_dobiop) %>% ymd(),
+           cor_dobiop = as.character(cor_dobiop) %>% ymd()) %>% 
+    filter(!(vis_dobiop==cor_dobiop)|is.na(vis_dobiop)|is.na(vor_dobiop)) %>% 
+    flextable() %>% 
+    add_header_row(values=source,colwidths = (ncol(formData)-1)) %>% 
+    width(c(1:(ncol(formData)-1)),width=7/(ncol(formData)-1)) %>% 
+    bg(i=seq(1,nrow(formData),2),bg='grey90')
+  
+  return(summaryTable)
+}
+
+concatinatedDataTable <- function(data, dataDict){
+  
+  groupedVars <- c('cor_onctrt_asmets','cor_onctrt_erpos','cor_onctrt_herpos','cor_onctrt_tn')
+  groupedSyms <- groupedVars %>% 
+    map(as.symbol)
+  
+
+  
+  summaryData <- data %>% 
+    filter(redcap_repeat_instrument=='') %>% 
+    select(vis_id,all_of(groupedVars)) %>% 
+    group_by(!!!groupedSyms) %>%
+    mutate(vis_id=as.character(vis_id)) %>% 
+    summarise(firstID=as.numeric(first(vis_id)),
+              vis_id=str_flatten(vis_id,', '),.groups = 'drop') %>% 
+    ungroup() %>% 
+    arrange(firstID) %>% 
+    select(vis_id,all_of(groupedVars)) 
+  
+  
+  renameList <- dataDict %>% 
+    filter(varnm%in%groupedVars)%$%
+    setNames(varnm,myLabel)
+  
+  summaryTable <- summaryData %>% 
+    rename(!!renameList) %>% 
+    flextable() %>% 
+    add_header_row(values='Treatment Plan Details',colwidths = (ncol(summaryData))) %>% 
+    width(1,2) %>% 
+    width(c(2:(ncol(summaryData))),width=5/(ncol(summaryData)-1)) %>%
+    bg(i=seq(1,nrow(summaryData),2),bg='grey90')
+  
+  return(summaryTable)
+}
+
+
+# data %>% 
+#   concatinatedDataTable(dataDict)
+
+
+
 
 ```
 
 
 
-```{r documentCreation, results='asis'}
+```{r Document Creation, results='asis'}
 
 
 
@@ -60,15 +220,9 @@ formKnit <- function(form){
     '}',
     '```',
     '',
-    '',
-    '',
     '# `r formName`',
     '',
     '```{r, results="asis"}',
-    '',
-    '',
-    '',
-    
     'sectionRes <- dataSummary %>%
     filter(source == form) %>%
     pull(varnm) %>%
@@ -89,4 +243,3 @@ res <- dataSummary %>%
 cat(unlist(res), sep = '\n')
 
 ```
-

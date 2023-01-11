@@ -95,19 +95,38 @@ plotSummarizer <- function(data,variableLabel,graphLabels){
   return(p)
 }
 
-tableSummarizer <- function(idValues,variableLabel){
-  idValues %>% 
-    select(vis_id,value) %>% 
-    mutate(vis_id=as.character(vis_id),
-           value=str_replace_all(value,'\n','->')) %>%
-    group_by(value) %>% 
-    summarise(vis_id=vis_id %>% str_flatten(collapse=', ') ) %>% 
-    select(vis_id,value) %>% 
-    arrange(value) %>% 
+tableSummarizer <- function(data,variableLabel){
+  
+  summaryData <- data %>% 
+    filter(value!='') %>% 
+    group_by(name,value) %>%
+    mutate(vis_id=as.numeric(vis_id),
+           value=str_replace_all(value,'(?<=[0-9])\n(?=[0-9])','->'),
+           value=str_replace_all(value,'\n',' ')) %>%
+    arrange(vis_id) %>% 
+    mutate(vis_id=as.character(vis_id)) %>% 
+    summarise(firstID=as.numeric(first(vis_id)),
+              vis_id=str_flatten(vis_id, collapse=', '),.groups = 'drop') %>% 
+    arrange(firstID) %>% 
+    select(vis_id,value)
+    
+
+  # summaryData <- idValues %>% 
+  #   select(vis_id,value) %>% 
+  #   mutate(vis_id=as.character(vis_id),
+  #          value=str_replace_all(value,'\n','->')) %>%
+  #   group_by(value) %>% 
+  #   summarise(vis_id= str_flatten(vis_id, collapse=', ') ) %>% 
+  #   select(vis_id,value) %>% 
+  #   arrange(value)
+  
+  summaryTable <- summaryData %>% 
     flextable() %>% 
-    width(2,4.5) %>% 
-    width(1,2) %>% 
-    add_header_row(values=variableLabel,colwidths = 2)
+    width(2,6) %>% 
+    width(1,1) %>% 
+    add_header_row(values=variableLabel,colwidths = 2) %>% 
+    bg(i=seq(1,nrow(summaryData),2),bg='grey95')
+  return(summaryTable)
 }
 
 
@@ -151,7 +170,7 @@ formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabe
   
   
   data$value <- switch (dataType,
-    `$` = data$value %>% as.character() %>% str_wrap(80) %>% factor(),
+    `$` = data$value %>% as.character() %>% str_wrap(20) %>% factor(),
     `01` = data$value %>% factor(levels=c(1,0)),
     `##` = data$value %>% as.numeric(),
     `#` = data$value %>%  as.integer(),
@@ -162,6 +181,8 @@ formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabe
   
   return(data)
 }
+
+
 
 ####Cutting up Continuous Data####
 
@@ -181,7 +202,7 @@ dataCutting <- function(data,dataType){
     pull(value) %>% 
     length()
 
-  if(nGroups<=11){
+  if(nGroups<=10){
     
     data <- data %>% 
       mutate(value=factor(value) %>% fct_rev())
@@ -197,7 +218,7 @@ dataCutting <- function(data,dataType){
   }
   
   data <- data %>% 
-    mutate(value=cut(value,11),
+    mutate(value=cut(value,10),
            value=fct_rev(value))
   
   if(dataType=='dt'){
@@ -237,7 +258,7 @@ variableSummarizer <- function(data, variableLabel){
   
   
   figureTable <- switch(tableType,
-                        default=tableSummarizer(idsToAdd,variableLabel))
+                        default=tableSummarizer(data,variableLabel))
 
 
   tibble(summaryPlot=list(figurePlot),summaryTable=list(figureTable),lowCountIds=list(idsToAdd)) %>% 
@@ -245,12 +266,100 @@ variableSummarizer <- function(data, variableLabel){
 }
 
 
-####Vars To Check####
-variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
+
 
 ####Testing and Output####
 
+if(FALSE){
+  variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
+  
+  
+  tibble(varnm=colnames(data)) %>% 
+    mutate(row=row_number())
 
+  shortcatsCheckBoxFormatting <- function(tp,varnm,values,shortcats){
+    if(tp=='01'){
+      variableValue=str_extract(varnm,'(?<=[_]{3})[0-9]+')
+      variableLabelIndex=which(values==variableValue)
+      return(shortcats[variableLabelIndex])
+    }
+    return(shortcats)
+  }
+  
+  valueCheckBoxFormatting <- function(tp,varnm,values){
+    if(tp=='01'){
+      return(str_extract(varnm,'(?<=[_]{3})[0-9]+'))
+    }
+    return(values)
+  }
+    
+  
+  dataTypeChanging <- dataDict %>% 
+    select(varnm,tp,values,shortcats) %>% 
+    mutate(values=str_remove_all(values,'\"') %>% str_split(','),
+           shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>%
+    mutate(varnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) (paste0(.x,'___',.y))),map(varnm,function(.x) (.x)))) %>% 
+    unnest_longer(varnm) %>% 
+    left_join(tibble(varnm=colnames(data)) %>% 
+                mutate(row=row_number())) %>%
+    # filter(str_detect(varnm,'cl_mets')) %>% 
+    mutate(shortcats=pmap(list(tp,varnm,values,shortcats),~shortcatsCheckBoxFormatting(..1,..2,..3,..4)),
+           values=pmap(list(tp,varnm,values),~valueCheckBoxFormatting(..1,..2,..3))) 
+  
+  
+  dataTypeChanging %$%
+    pwalk(list(varnm,tp,values,shortcats,row),~dataTableTyper(..1,..2,..3,..4))
+  
+  data
+
+dataTableTyper <- function(varnm,tp,values,shortcats,row){
+  data %<>%
+    mutate('{{varnm}}':=dataTransform(varnm,tp,values,shortcats))
+}
+  
+dataTransform <- function(varnm,dataType,variableValues,variableLabels){
+  data[varnm] <- switch (dataType,
+                        `$` = data[[varnm]] %>% as.character() %>% str_wrap(20) %>% factor(),
+                        `01` =data[[varnm]] %>% factor(levels=c(1,0),labels=c(variableLabels,'0')),
+                        `##` = data[[varnm]] %>% as.numeric(),
+                        `#` = data[[varnm]] %>%  as.integer(),
+                        `dt` = data[[varnm]] %>% ymd() %>% as.integer(),
+                        `b` = data[[varnm]] %>%  factor(levels=variableValues,labels = variableLabels) %>% str_wrap(11) %>% fct_rev(),
+                        `b0` = data[[varnm]] %>% factor(levels=variableValues,labels = variableValues) %>% fct_rev()
+  )
+  return(data[varnm])
+  
+}
+
+
+  data %>% 
+    mutate(across(dataTypeChanging$row[dataTypeChanging$tp=='$'][[1]],as.character),
+           across(dataTypeChanging$row[dataTypeChanging$tp=='#'][[1]],as.integer),
+           across(dataTypeChanging$row[dataTypeChanging$tp=='##'][[1]],as.numeric),
+           across(dataTypeChanging$row[dataTypeChanging$tp=='dt'][[1]],~.x %>% ymd() %>% as.integer()),
+           across(dataTypeChanging$row[dataTypeChanging$tp=='b'][[1]],~factor(.x)),
+           across(dataTypeChanging$row[dataTypeChanging$tp=='b0'][[1]],~factor(.x)),
+           across(dataTypeChanging$row[dataTypeChanging$tp=='01'][[1]],~factor(.x,levels=c(1,0))))
+  
+  
+dataFactorFormatter <- function(data,colName,variableValues,variableLabels){
+  data %>% 
+    mutate("{{colName}}":=factor(.data[[colName]],variableValues,variableLabels))
+}
+
+  data %>% 
+    
+  
+  
+  
+  dataDict %>% 
+    select(varnm,tp,values) %>% 
+    mutate(values=str_remove_all(values,'\"') %>% str_split(',')) %>% 
+    mutate(varnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) paste0(.x,'___',.y)),map(varnm,function(.x) list(.x)))) %>% 
+    group_by(tp)
+  
+  
+  
 dataSummary <- dataDict %>% 
   slice(variableNumbers) %>%
   mutate(rep=if_else(is.na(rep),'',source),
@@ -275,3 +384,9 @@ dataDict %>%
   slice(1) %>% 
   pull(rep) %>% 
   {!is.na(.)}
+}
+
+
+
+
+
