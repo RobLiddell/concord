@@ -167,13 +167,13 @@
 166,blood_ctdna_results,ctdna_comm,ctdna_comm,default,table
 167,blood_ctdna_results,ctdna_dec,ctdna_dec,default,plot
 168,blood_ctdna_results,ctdna_dec_oth,ctdna_dec_oth,default,table
-169,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_loccen,default,table
-170,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_mrkr,default,table
-171,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_mrkr_oth,default,table
-172,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_dotest,default,table
-173,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_res,default,table
-174,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_rng_lo,default,table
-175,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_rng_hi,default,table
+169,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_loccen,combined,table
+170,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_mrkr,combined,table
+171,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_mrkr_oth,combined,table
+172,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_dotest,combined,table
+173,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_res,combined,table
+174,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_rng_lo,combined,table
+175,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_rng_hi,combined,table
 176,fup_inconclusive_biopsy,fup_doassess,fup_doassess,default,plot
 177,fup_inconclusive_biopsy,fup_imag,fup_imag,default,plot
 178,fup_inconclusive_biopsy,fup_meth,fup_meth,default,plot
@@ -195,12 +195,12 @@
 194,fup_inconclusive_biopsy,fup_pathdec_oth,fup_pathdec_oth,default,table
 195,fup_inconclusive_biopsy,fup_oncdec,fup_oncdec,default,plot
 196,fup_inconclusive_biopsy,fup_oncdec_oth,fup_oncdec_oth,default,table
-197,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup,default,plot
-198,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_name,default,plot
-199,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_typ,default,plot
-200,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_dost,default,plot
-201,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_response,default,plot
-202,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_comm,default,table
+197,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup,combined,table
+198,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_name,combined,table
+199,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_typ,combined,table
+200,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_dost,combined,table
+201,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_response,combined,table
+202,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_comm,combined,table
 203,tissue_collection,tiss_mets,tiss_mets,default,plot
 204,tissue_collection,tiss_mets_exp,tiss_mets_exp,default,plot
 205,tissue_collection,tiss_mets_typ,tiss_mets_typ,default,plot
