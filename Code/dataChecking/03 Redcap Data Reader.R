@@ -10,10 +10,11 @@ dataDict=read_csv('Data/meta/04 CONCORD REDCap for data management2021-11-26.csv
   mutate(values=str_remove_all(values,'\"') %>% str_split(','),
          shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>%
   mutate(tp=if_else(tp=='1','01',tp),
-         varnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) (paste0(.x,'___',.y))),map(varnm,function(.x) (.x))))
+         expandedVarnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) (paste0(.x,'___',.y))),map(varnm,function(.x) (.x)))) 
 
 #Subset dataDict creating variables for '01' data types
 allVariableInfo <- dataDict %>% 
+  mutate(varnm=expandedVarnm) %>% 
   select(varnm,tp,values,shortcats,source,myLabel) %>% 
   unnest_longer(varnm)
 
@@ -57,7 +58,7 @@ checkBoxFactorer <- function(data,variableName,variableValues,variableLabels){
   variableValues <- variableValues %>% 
     append(0)
   variableLabels <- variableLabels %>% 
-    append(0)
+    append(0) 
   
   #assign('test',test,envir=.GlobalEnv) may want to impliment this to be more specific
   
