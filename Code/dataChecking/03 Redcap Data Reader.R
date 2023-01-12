@@ -50,10 +50,32 @@ data <- allVariableInfo %>%
   filter(tp=='dt') %$% 
   mutate(data,across(.col=all_of(varnm),ymd))
 
+
+#Function for modifying checkbox variables in the data dataSet
+checkBoxFactorer <- function(data,variableName,variableValues,variableLabels){
+  
+  variableValues <- variableValues %>% 
+    append(0)
+  variableLabels <- variableLabels %>% 
+    append(0)
+  
+  data<<-data %>%mutate({{variableName}}:=.data[[variableName]]*as.integer(str_extract(variableName,'(?<=_)[0-9]+$')),
+                        {{variableName}}:=factor(.data[[variableName]],
+                                                 levels=variableValues,
+                                                 labels=variableLabels))
+}
+
 #Format CheckBoxVariables
-allCheckBoxVariables <- allVariableInfo %>% 
-  filter(tp=='01') %>% 
-  pull(varnm)
+allVariableInfo %>% 
+  filter(tp=='01') %$% 
+  pwalk(list(varnm,values,shortcats),~checkBoxFactorer(data,..1,..2,..3))
+
+
+
+
+data %>% 
+  pull(cl_mets___1) %>% 
+  levels()
 
 for(currentCheckBox in allCheckBoxVariables){
   
@@ -68,9 +90,6 @@ for(currentCheckBox in allCheckBoxVariables){
                                        levels=factorInfo$values[[1]],
                                        labels=factorInfo$shortcats[[1]]))
 }
-
-
-
 
 
 
