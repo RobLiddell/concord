@@ -98,5 +98,8 @@ radioBasicFactorer <- function(data,variableName,variableValues,variableLabels){
 }
 
 allVariableInfo %>% 
-  filter(tp=='b') %$% 
+  filter(tp=='b0') %$% 
   pwalk(list(varnm,values,shortcats),~radioBasicFactorer(data,..1,..2,..3))
+
+
+
