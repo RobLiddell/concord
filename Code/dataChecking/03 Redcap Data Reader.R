@@ -51,7 +51,7 @@ data <- allVariableInfo %>%
   mutate(data,across(.col=all_of(varnm),ymd))
 
 
-#Function for modifying checkbox variables in the data dataSet
+#Formatting CheckBoxVariables
 checkBoxFactorer <- function(data,variableName,variableValues,variableLabels){
   
   variableValues <- variableValues %>% 
@@ -59,48 +59,43 @@ checkBoxFactorer <- function(data,variableName,variableValues,variableLabels){
   variableLabels <- variableLabels %>% 
     append(0)
   
+  #assign('test',test,envir=.GlobalEnv) may want to impliment this to be more specific
+  
   data<<-data %>%mutate({{variableName}}:=.data[[variableName]]*as.integer(str_extract(variableName,'(?<=_)[0-9]+$')),
                         {{variableName}}:=factor(.data[[variableName]],
                                                  levels=variableValues,
                                                  labels=variableLabels))
 }
 
-#Format CheckBoxVariables
 allVariableInfo %>% 
   filter(tp=='01') %$% 
   pwalk(list(varnm,values,shortcats),~checkBoxFactorer(data,..1,..2,..3))
 
-
-
-
-data %>% 
-  pull(cl_mets___1) %>% 
-  levels()
-
-for(currentCheckBox in allCheckBoxVariables){
-  
-  factorInfo <- allVariableInfo %>% 
-    filter(varnm==currentCheckBox) %>% 
-    select(values,shortcats) %>% 
-    mutate(across(everything(),~list(append(unlist(.x),0))))
-  
-  data <- data %>% 
-    mutate({{currentCheckBox}}:=.data[[currentCheckBox]]*as.integer(str_extract(currentCheckBox,'(?<=_)[0-9]+$')),
-           {{currentCheckBox}}:=factor(.data[[currentCheckBox]],
-                                       levels=factorInfo$values[[1]],
-                                       labels=factorInfo$shortcats[[1]]))
-}
-
-
-
 #Formatting b variables
-data %>% 
-  select(all_of(allVariableInfo$varnm[allVariableInfo$tp%in%c('01','b','b0')] )) %>% 
-  colnames()
-
-for(i in c('01','b','b0')){
+radioShortCatsFactorer <- function(data,variableName,variableValues,variableLabels){
   
+  variableValues <- variableValues 
+  variableLabels <- variableLabels 
+  
+  data<<-data %>%mutate({{variableName}}:=factor(.data[[variableName]],
+                                                 levels=variableValues,
+                                                 labels=variableLabels))
 }
 
+allVariableInfo %>% 
+  filter(tp=='b') %$% 
+  pwalk(list(varnm,values,shortcats),~radioShortCatsFactorer(data,..1,..2,..3))
 
+#Formatting b0 Variables
+radioBasicFactorer <- function(data,variableName,variableValues,variableLabels){
+  
+  variableValues <- variableValues 
 
+  data<<-data %>%mutate({{variableName}}:=factor(.data[[variableName]],
+                                                 levels=variableValues,
+                                                 labels=variableValues))
+}
+
+allVariableInfo %>% 
+  filter(tp=='b') %$% 
+  pwalk(list(varnm,values,shortcats),~radioBasicFactorer(data,..1,..2,..3))
