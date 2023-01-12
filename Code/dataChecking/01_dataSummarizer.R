@@ -124,8 +124,7 @@ getData <- function(data,variableName,instrumentLabel){
   
   returnDat <- data %>%
     filter(redcap_repeat_instrument==instrumentLabel) %>%
-    select(rowID,vis_id,all_of(variableName)) %>% 
-    pivot_longer(cols=all_of(variableName))
+    select(rowID,vis_id,all_of(variableName))
     
   return(returnDat)
 }
@@ -258,10 +257,11 @@ if(FALSE){
     slice(reportRows)
     
   
-  
-  
+
   dataSummaryOutline %<>%
-    left_join(dataDict %>% select(varnm,rep,source,expandedVarnm)) %>% 
+    left_join(dataDict %>% select(varnm,rep,source,expandedVarnm,myLabel,shortcats,tp)) %>% 
+    mutate(subsection=if_else(subsection==varnm,myLabel,subsection)) %>% 
+    select(-myLabel) %>% 
     mutate(dataRows=if_else(is.na(rep),'',source),
            varnm=expandedVarnm) %>% 
     select(-rep,-source,-expandedVarnm) %>% 
@@ -270,40 +270,87 @@ if(FALSE){
     summarise(ord=first(ord),
               varnm=list(varnm),
               dataRows=first(dataRows),
+              tp=list(tp),
+              shortcats=list(shortcats),
               graphicStyle=first(graphicStyle),
               graphic=first(graphic),
               .groups = 'drop') %>% 
     arrange(ord) %>% 
-    relocate(ord,.before = 1)
-                       
-  dataSummaryOutline %>% 
-    slice(1) %>% 
+    relocate(ord,.before = 1) %>% 
     mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y)))
   
-  
-  
-dataSummary <- dataDict %>% 
-  mutate(rep=if_else(is.na(rep),'',source)) %>% 
-  slice(variableNumbers) %>%
-  slice(12) %>%
-  mutate(dat=pmap(list(varnm,rep,tp,values),
-                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4))) %>% 
-  mutate(dat=pmap(list(dat,tp),
-                  ~dataCutting(..1,..2)))
-
-
-dataSummary %>% 
-  # slice(12) %>% 
-  pull(dat)
-
-  mutate(dat=pmap(list(dat,tp,varnm,values,shortcats),
-                  ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
-  mutate(dat=pmap(list(dat,tp),
-                  ~dataCutting(..1,..2))) %>% 
-  mutate(summaryOutput=pmap(list(dat,myLabel),
-                            ~variableSummarizer(..1,..2)))
+  dataSummaryOutline %>% 
+    filter(graphic=='plot') %>% 
+    mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) 
   
 
+  testData <- dataSummaryOutline %>% 
+    filter(graphic=='plot') %>% 
+    filter(ord=='3')
+  
+  cutData <- function(graphicData,dataTypeList,graphicStyle){
+    
+    if(graphicStyle!='default'){
+      return(graphicData)
+    }else if(graphic == 'table'){
+      return(graphicData)
+    }
+    
+    cutColumn <- function(graphicData,variableName,dataType){
+
+      if(dataType%in%c('$','01','b','b0')){
+        return()
+      }
+      
+      nGroups <- graphicData %>% 
+        distinct(across(all_of(variableName))) %>% 
+        pull(variableName) %>% 
+        length()
+      
+      if(nGroups<=10){
+        
+        graphicData <- graphicData %>% 
+          mutate({{variableName}}:=factor(.data[[variableName]]) %>% fct_rev())
+        graphicData[[variableName]] <<- graphicData[[variableName]]
+        return()
+      }
+      
+      if(dataType=='dt'){
+        graphicData <- graphicData %>%
+          mutate({{variableName}}:=as.numeric(.data[[variableName]]))
+      }
+      
+      graphicData <- graphicData %>% 
+        mutate({{variableName}}:=cut(.data[[variableName]],10),
+               {{variableName}}:=fct_rev(.data[[variableName]]))
+      
+      if(dataType=='dt'){
+        levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
+          str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
+          str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
+          str_replace('[0-9]{5}',stringNumToDate)
+      }
+      levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
+        str_remove_all('[\\(\\]]') %>% 
+        str_replace(',','\n') 
+      
+      graphicData[[variableName]] <<- graphicData[[variableName]]
+      #assign('test',test,envir=.GlobalEnv) may want to implement this to be more specific about assignment environment
+      
+    }
+    
+    
+    # graphicData <- testData$graphicData[[1]]
+    # graphicStyle <- testData$graphicStyle[[1]]
+    # dataTypeList <- testData$tp[[1]]
+    
+    tibble(dataType=dataTypeList,dataColumns=colnames(graphicData)[3:ncol(graphicData)])%$%
+      walk2(dataColumns,dataType,~cutColumn(graphicData,.x,.y))
+    
+    return(graphicData)
+    
+
+  }
 
 
 }
