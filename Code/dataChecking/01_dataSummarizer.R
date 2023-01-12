@@ -15,35 +15,16 @@ library(flextable)
 ####Data Loading####
 #load the ConcordanceStudy Data
 
-##Source the second file to load data
-dataLoc <- 'Data/raw'
+##Sourcing this file provides the data, dataDictionary
+##and expanded variable info for the 
 
-source("Data/raw/02 ConcordanceStudy_R_2022-12-30_1413.r") 
-data <- data %>% 
-  tibble() %>% 
-  mutate(ord=row_number(),.before = vis_id)
-
-
-#ConcordanceStudy Data Dictionary
-dataDictLoc <- 'Data/meta/02 CONCORD REDCap for data management2021-11-26.xlsx'
-
-dataDict <- read_xlsx(dataDictLoc,
-          sheet=2,
-          skipEmptyCols = T) %>% 
-  tibble() %>% 
-  slice(-1)
-
+source("Code/dataChecking/03 Redcap Data Reader.r") 
+data 
+dataDict
+allVariableInfo
 currentDate=ymd('2021-11-26')
 
-#ConcordanceStudy Summary Graphic Type
-dataGraphicTypeLoc <- 'Data/meta/03 CONCORD REDCap Summary Type.xlsx'
 
-dataDict <- read_xlsx(dataGraphicTypeLoc,
-                         sheet=1,
-                         skipEmptyRows = TRUE,
-                         skipEmptyCols = TRUE) %>% 
-  tibble() %>% 
-  {left_join(dataDict,.)}
 
 ####Helper Functions####
 
@@ -135,24 +116,17 @@ tableSummarizer <- function(data,variableLabel){
 #getData uses variableName, instrument label, dataType, and values to find and 
 #return the appropriate data from 'data'
 #Return data for each variable along with row number and vis id
-getData <- function(data,variableName,instrumentLabel,dataType,values){
+getData <- function(data,variableName,instrumentLabel){
   
-  if(dataType=='01'){
-    
-    checkBoxVariables <- paste0(variableName,'___',values)
-
-    returnDat <- data %>%
-      filter(redcap_repeat_instrument==instrumentLabel) %>%
-      select(ord,vis_id,all_of(checkBoxVariables)) %>% 
-      mutate(across(all_of(checkBoxVariables),~as.numeric(.x))) %>% 
-      pivot_longer(cols=all_of(checkBoxVariables))
-    
-  }else{
-    returnDat <- filter(data,redcap_repeat_instrument==instrumentLabel) %>% 
-      select(ord,vis_id,all_of(variableName)) %>% 
-      pivot_longer(cols=all_of(variableName))
-  }
+  data <- data %>% 
+    mutate(redcap_repeat_instrument=if_else(is.na(redcap_repeat_instrument),'',
+                                            redcap_repeat_instrument))
   
+  returnDat <- data %>%
+    filter(redcap_repeat_instrument==instrumentLabel) %>%
+    select(rowID,vis_id,all_of(variableName)) %>% 
+    pivot_longer(cols=all_of(variableName))
+    
   return(returnDat)
 }
 
@@ -207,14 +181,19 @@ dataCutting <- function(data,dataType){
     data <- data %>% 
       mutate(value=factor(value) %>% fct_rev())
     
-    if(dataType=='dt'){
-      levels(data$value) <- levels(data$value) %>% 
-        str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
-        str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
-        str_replace('[0-9]{5}',stringNumToDate)
-    }
+    # if(dataType=='dt'){
+    #   levels(data$value) <- levels(data$value) %>% 
+    #     str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
+    #     str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
+    #     str_replace('[0-9]{5}',stringNumToDate)
+    # }
     
     return(data)
+  }
+  
+  if(dataType=='dt'){
+    data <- data %>%
+      mutate(value=as.numeric(value))
   }
   
   data <- data %>% 
@@ -271,16 +250,52 @@ variableSummarizer <- function(data, variableLabel){
 ####Testing and Output####
 
 if(FALSE){
-  variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
+  
+  #ConcordanceStudy Summary Graphic Type
+  dataGraphicTypeLoc <- 'Code/reportRender/dataSummaryReportOutline.csv'
+  reportRows <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202,215:220)
+  dataSummaryOutline <- read_csv(dataGraphicTypeLoc) %>% 
+    slice(reportRows)
+    
+  
+  
+  
+  dataSummaryOutline %<>%
+    left_join(dataDict %>% select(varnm,rep,source,expandedVarnm)) %>% 
+    mutate(dataRows=if_else(is.na(rep),'',source),
+           varnm=expandedVarnm) %>% 
+    select(-rep,-source,-expandedVarnm) %>% 
+    unnest_longer(varnm) %>% 
+    group_by(section,subsection) %>% 
+    summarise(ord=first(ord),
+              varnm=list(varnm),
+              dataRows=first(dataRows),
+              graphicStyle=first(graphicStyle),
+              graphic=first(graphic),
+              .groups = 'drop') %>% 
+    arrange(ord) %>% 
+    relocate(ord,.before = 1)
+                       
+  dataSummaryOutline %>% 
+    slice(1) %>% 
+    mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y)))
+  
   
   
 dataSummary <- dataDict %>% 
+  mutate(rep=if_else(is.na(rep),'',source)) %>% 
   slice(variableNumbers) %>%
-  mutate(rep=if_else(is.na(rep),'',source),
-         values=str_remove_all(values,'\"') %>% str_split(','),
-         shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>% 
+  slice(12) %>%
   mutate(dat=pmap(list(varnm,rep,tp,values),
-                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
+                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4))) %>% 
+  mutate(dat=pmap(list(dat,tp),
+                  ~dataCutting(..1,..2)))
+
+
+dataSummary %>% 
+  # slice(12) %>% 
+  pull(dat)
+
   mutate(dat=pmap(list(dat,tp,varnm,values,shortcats),
                   ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
   mutate(dat=pmap(list(dat,tp),
@@ -288,76 +303,12 @@ dataSummary <- dataDict %>%
   mutate(summaryOutput=pmap(list(dat,myLabel),
                             ~variableSummarizer(..1,..2)))
   
+
+
+
 }
 
 
-####Formatting Full Table####
 
-if(FALSE){
-  
-  
-  shortcatsCheckBoxFormatting <- function(tp,varnm,values,shortcats){
-    if(tp=='01'){
-      variableValue=str_extract(varnm,'(?<=[_]{3})[0-9]+')
-      variableLabelIndex=which(values==variableValue)
-      return(shortcats[variableLabelIndex])
-    }
-    return(shortcats)
-  }
-  
-  valueCheckBoxFormatting <- function(tp,varnm,values){
-    if(tp=='01'){
-      return(str_extract(varnm,'(?<=[_]{3})[0-9]+'))
-    }
-    return(values)
-  }
-  
-  
-  dataTypeChanging <- dataDict %>% 
-    select(varnm,tp,values,shortcats) %>% 
-    mutate(values=str_remove_all(values,'\"') %>% str_split(','),
-           shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>%
-    mutate(varnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) (paste0(.x,'___',.y))),map(varnm,function(.x) (.x)))) %>% 
-    unnest_longer(varnm) %>% 
-    left_join(tibble(varnm=colnames(data)) %>% 
-                mutate(row=row_number())) %>%
-    # filter(str_detect(varnm,'cl_mets')) %>% 
-    mutate(shortcats=pmap(list(tp,varnm,values,shortcats),~shortcatsCheckBoxFormatting(..1,..2,..3,..4)),
-           values=pmap(list(tp,varnm,values),~valueCheckBoxFormatting(..1,..2,..3))) 
-  
-  
-  
-  
-  loadedData <- data %>% 
-    select(ord,starts_with('redcap_'))
-  
-  for(i in 1:nrow(dataTypeChanging)){
-    currentVariable=dataTypeChanging$varnm[[i]]
-    currentDataType=dataTypeChanging$tp[[i]]
-    currentDataValues=dataTypeChanging$values[[i]]
-    currentDataLabels=dataTypeChanging$shortcats[[i]]
-    
-    currentData <- data[[currentVariable]]
-    
-    
-    currentData <- switch (currentDataType,
-                           `$` = currentData %>% as.character() %>% str_wrap(20) %>% factor(exclude=c('',NA)),
-                           `01` =currentData %>% factor(levels=c(1,0),labels=c(currentDataLabels,'0')),
-                           `##` = currentData %>% as.numeric(),
-                           `#` = currentData %>%  as.integer(),
-                           `dt` = currentData %>% ymd() %>% as.integer(),
-                           `b` = currentData %>%  factor(levels=currentDataValues,labels = currentDataLabels) %>% str_wrap(11) %>% fct_rev(),
-                           `b0` = currentData %>% factor(levels=currentDataValues,labels = currentDataValues) %>% fct_rev())
-    loadedData[[currentVariable]] <- currentData
-    
-  }
-  
-  loadedData
-  
-  colnames(data[1])
-  
-  data
-  
-}
 
 
