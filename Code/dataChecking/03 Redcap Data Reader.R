@@ -75,9 +75,6 @@ allVariableInfo %>%
 #Formatting b variables
 radioShortCatsFactorer <- function(data,variableName,variableValues,variableLabels){
   
-  variableValues <- variableValues 
-  variableLabels <- variableLabels 
-  
   data<<-data %>%mutate({{variableName}}:=factor(.data[[variableName]],
                                                  levels=variableValues,
                                                  labels=variableLabels))
@@ -90,8 +87,6 @@ allVariableInfo %>%
 #Formatting b0 Variables
 radioBasicFactorer <- function(data,variableName,variableValues,variableLabels){
   
-  variableValues <- variableValues 
-
   data<<-data %>%mutate({{variableName}}:=factor(.data[[variableName]],
                                                  levels=variableValues,
                                                  labels=variableValues))
