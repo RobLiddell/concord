@@ -1,0 +1,221 @@
+﻿ord,section,subsection,varnm,graphicStyle,graphic
+1,study_visit_assessment,vis_id,vis_id,default,plot
+2,study_visit_assessment,vis_init,vis_init,default,plot
+3,study_visit_assessment,vis_doc,vis_doc,default,plot
+4,study_visit_assessment,vis_yob,vis_yob,default,plot
+5,study_visit_assessment,vis_mob,vis_mob,default,plot
+6,study_visit_assessment,vis_sex,vis_sex,default,plot
+7,study_visit_assessment,vis_doa,vis_doa,default,plot
+8,study_visit_assessment,vis_dobiop,vis_dobiop,default,plot
+9,study_visit_assessment,vis_dobd,vis_dobd,default,plot
+10,study_visit_assessment,vis_bd,vis_bd,default,plot
+11,study_visit_assessment,vis_wt,vis_wt,default,plot
+12,study_visit_assessment,vis_ht,vis_ht,default,plot
+13,study_visit_assessment,vis_docbc,vis_docbc,default,plot
+14,study_visit_assessment,vis_cbc_thrombo,vis_cbc_thrombo,default,plot
+15,study_visit_assessment,vis_cbc_eryth,vis_cbc_eryth,default,plot
+16,study_visit_assessment,vis_cbc_hemog,vis_cbc_hemog,default,plot
+17,study_visit_assessment,vis_cbc_leuko,vis_cbc_leuko,default,plot
+18,study_visit_assessment,vis_cbc_neutro,vis_cbc_neutro,default,plot
+19,study_visit_assessment,vis_cbc_monocy,vis_cbc_monocy,default,plot
+20,study_visit_assessment,vis_cbc_basop,vis_cbc_basop,default,plot
+21,study_visit_assessment,vis_cbc_lympho,vis_cbc_lympho,default,plot
+22,study_visit_assessment,vis_cbc_eosino,vis_cbc_eosino,default,plot
+23,study_visit_assessment,vis_cbc_imgran,vis_cbc_imgran,default,plot
+24,study_visit_assessment,vis_bld_comm,vis_bld_comm,default,table
+25,tumor_char_orig_primbc,tmc_lt,tmc_lt,default,plot
+26,tumor_char_orig_primbc,tmc_dodiag,tmc_dodiag,default,plot
+27,tumor_char_orig_primbc,tmc_wt,tmc_wt,default,plot
+28,tumor_char_orig_primbc,tmc_ht,tmc_ht,default,plot
+29,tumor_char_orig_primbc,tmc_indx,tmc_indx,default,plot
+30,tumor_char_detail (Repeated Form),tmc_brst,tmc_brst,default,plot
+31,tumor_char_detail (Repeated Form),tmc_neo,tmc_neo,default,plot
+32,tumor_char_detail (Repeated Form),tmc_cl_syz,tmc_cl_syz,default,plot
+33,tumor_char_detail (Repeated Form),tmc_pth_syz,tmc_pth_syz,default,plot
+34,tumor_char_detail (Repeated Form),tmc_com,tmc_com,default,plot
+35,tumor_char_detail (Repeated Form),tmc_biop,tmc_biop,default,plot
+36,tumor_char_detail (Repeated Form),tmc_dobiop,tmc_dobiop,default,plot
+37,tumor_char_detail (Repeated Form),tmc_lump,tmc_lump,default,plot
+38,tumor_char_detail (Repeated Form),tmc_dolump,tmc_dolump,default,plot
+39,tumor_char_detail (Repeated Form),tmc_mast,tmc_mast,default,plot
+40,tumor_char_detail (Repeated Form),tmc_domast,tmc_domast,default,plot
+41,tumor_char_detail (Repeated Form),tmc_oth_sur,tmc_oth_sur,default,plot
+42,tumor_char_detail (Repeated Form),tmc_oth_sur_sp,tmc_oth_sur_sp,default,plot
+43,tumor_char_detail (Repeated Form),tmc_doothsur,tmc_doothsur,default,plot
+44,tumor_char_detail (Repeated Form),tmc_neo_tx,tmc_neo_tx,default,plot
+45,tumor_char_detail (Repeated Form),tmc_tstage,tmc_tstage,default,plot
+46,tumor_char_detail (Repeated Form),tmc_tstage_src,tmc_tstage_src,default,plot
+47,tumor_char_detail (Repeated Form),tmc_nstage,tmc_nstage,default,plot
+48,tumor_char_detail (Repeated Form),tmc_nstage_src,tmc_nstage_src,default,plot
+49,tumor_char_detail (Repeated Form),tmc_nod_rem,tmc_nod_rem,default,plot
+50,tumor_char_detail (Repeated Form),tmc_nod_pos,tmc_nod_pos,default,plot
+51,tumor_char_detail (Repeated Form),tmc_nod_typ,tmc_nod_typ,default,plot
+52,tumor_char_detail (Repeated Form),tmc_stg_comm,tmc_stg_comm,default,table
+53,tumor_char_detail (Repeated Form),tmc_src_dia,tmc_src_dia,default,plot
+54,tumor_char_detail (Repeated Form),tmc_hist,tmc_hist,default,plot
+55,tumor_char_detail (Repeated Form),tmc_hist_oth,tmc_hist_oth,default,plot
+56,tumor_char_detail (Repeated Form),tmc_grd,tmc_grd,default,plot
+57,tumor_char_detail (Repeated Form),tmc_lvi,tmc_lvi,default,plot
+58,tumor_char_detail (Repeated Form),tmc_hist_comm,tmc_hist_comm,default,table
+59,tumor_char_detail (Repeated Form),tmc_dodiag_othtum,tmc_dodiag_othtum,default,table
+60,tumor_char_detail (Repeated Form),tmc_er,tmc_er,default,plot
+61,tumor_char_detail (Repeated Form),tmc_er_percent,tmc_er_percent,default,plot
+62,tumor_char_detail (Repeated Form),tmc_pr,tmc_pr,default,plot
+63,tumor_char_detail (Repeated Form),tmc_pr_percent,tmc_pr_percent,default,plot
+64,tumor_char_detail (Repeated Form),tmc_h2,tmc_h2,default,plot
+65,tumor_char_detail (Repeated Form),tmc_h2_scor,tmc_h2_scor,default,plot
+66,tumor_char_detail (Repeated Form),tmc_h2_fish,tmc_h2_fish,default,plot
+67,tumor_char_detail (Repeated Form),tmc_h2_fshres,tmc_h2_fshres,default,plot
+68,tumor_char_detail (Repeated Form),tmc_h2_fshratio,tmc_h2_fshratio,default,plot
+69,tumor_char_detail (Repeated Form),tmc_h2_fshcopy,tmc_h2_fshcopy,default,plot
+70,tumor_char_detail (Repeated Form),tmc_hor_comm,tmc_hor_comm,default,table
+71,radiation_treatment (Repeated Form),trad,trad,default,plot
+72,radiation_treatment (Repeated Form),trad_area,trad_area,default,plot
+73,radiation_treatment (Repeated Form),trad_area_oth,trad_area_oth,default,plot
+74,radiation_treatment (Repeated Form),trad_loc,trad_loc,default,plot
+75,radiation_treatment (Repeated Form),trad_dost,trad_dost,default,plot
+76,radiation_treatment (Repeated Form),trad_comm,trad_comm,default,table
+77,neoadjuv_treatment (Repeated Form),tneo,tneo,default,plot
+78,neoadjuv_treatment (Repeated Form),tneo_name,tneo_name,default,plot
+79,neoadjuv_treatment (Repeated Form),tneo_typ,tneo_typ,default,plot
+80,neoadjuv_treatment (Repeated Form),tneo_dost,tneo_dost,default,plot
+81,neoadjuv_treatment (Repeated Form),tneo_comm,tneo_comm,default,table
+82,adjuv_treatment (Repeated Form),tadj,tadj,default,plot
+83,adjuv_treatment (Repeated Form),tadj_name,tadj_name,default,plot
+84,adjuv_treatment (Repeated Form),tadj_typ,tadj_typ,default,plot
+85,adjuv_treatment (Repeated Form),tadj_dost,tadj_dost,default,plot
+86,adjuv_treatment (Repeated Form),tadj_comm,tadj_comm,default,table
+87,clinical_presentation,cl_mets,cl_mets,default,plot
+88,clinical_presentation,cl_mets_pain_loc,cl_mets_pain_loc,default,table
+89,clinical_presentation,cl_mets_neuro_sym,cl_mets_neuro_sym,default,table
+90,clinical_presentation,cl_mets_oth_sym,cl_mets_oth_sym,default,table
+91,sites_of_metastasis (Repeated Form),mets,mets,default,plot
+92,sites_of_metastasis (Repeated Form),mets_loc,mets_loc,default,plot
+93,sites_of_metastasis (Repeated Form),mets_othr_loc,mets_othr_loc,default,table
+94,sites_of_metastasis (Repeated Form),mets_meth,mets_meth,default,plot
+95,sites_of_metastasis (Repeated Form),mets_dt_bscan,mets_dt_bscan,default,plot
+96,sites_of_metastasis (Repeated Form),mets_dt_us,mets_dt_us,default,plot
+97,sites_of_metastasis (Repeated Form),mets_dt_mri,mets_dt_mri,default,plot
+98,sites_of_metastasis (Repeated Form),mets_dt_ct,mets_dt_ct,default,plot
+99,sites_of_metastasis (Repeated Form),mets_dt_exam,mets_dt_exam,default,plot
+100,sites_of_metastasis (Repeated Form),mets_othmeth,mets_othmeth,default,table
+101,sites_of_metastasis (Repeated Form),mets_dt_othmeth,mets_dt_othmeth,default,plot
+102,concurrent_locoreg (Repeated Form),loc,loc,default,plot
+103,concurrent_locoreg (Repeated Form),loc_site,loc_site,default,plot
+104,concurrent_locoreg (Repeated Form),loc_meth,loc_meth,default,plot
+105,concurrent_locoreg (Repeated Form),loc_dt_mam,loc_dt_mam,default,plot
+106,concurrent_locoreg (Repeated Form),loc_dt_us,loc_dt_us,default,plot
+107,concurrent_locoreg (Repeated Form),loc_dt_mri,loc_dt_mri,default,plot
+108,concurrent_locoreg (Repeated Form),loc_dt_ct,loc_dt_ct,default,plot
+109,concurrent_locoreg (Repeated Form),loc_dt_bscan,loc_dt_bscan,default,plot
+110,concurrent_locoreg (Repeated Form),loc_othmeth,loc_othmeth,default,plot
+111,concurrent_locoreg (Repeated Form),loc_dt_othmeth,loc_dt_othmeth,default,plot
+112,concurrent_locoreg (Repeated Form),loc_comm,loc_comm,default,plot
+113,core_tissue_surg_biopsy,cor_dobiop,cor_dobiop,default,plot
+114,core_tissue_surg_biopsy,cor_dopathrep,cor_dopathrep,default,plot
+115,core_tissue_surg_biopsy,cor_copypath,cor_copypath,default,plot
+116,core_tissue_surg_biopsy,cor_copypath_exp,cor_copypath_exp,default,table
+117,core_tissue_surg_biopsy,cor_pathrep,cor_pathrep,default,table
+118,core_tissue_surg_biopsy,cor_tissite,cor_tissite,default,plot
+119,core_tissue_surg_biopsy,cor_tissite_oth,cor_tissite_oth,default,table
+120,core_tissue_surg_biopsy,cor_meth,cor_meth,default,plot
+121,core_tissue_surg_biopsy,cor_meth_oth,cor_meth_oth,default,table
+122,core_tissue_surg_biopsy,cor_pathdec,cor_pathdec,default,plot
+123,core_tissue_surg_biopsy,cor_pathdec_oth,cor_pathdec_oth,default,table
+124,core_tissue_surg_biopsy,cor_recept,cor_recept,default,plot
+125,core_tissue_surg_biopsy,cor_er_status,cor_er_status,default,plot
+126,core_tissue_surg_biopsy,cor_er_perc_pos,cor_er_perc_pos,default,plot
+127,core_tissue_surg_biopsy,cor_er_int,cor_er_int,default,plot
+128,core_tissue_surg_biopsy,cor_pgr_status,cor_pgr_status,default,plot
+129,core_tissue_surg_biopsy,cor_pgr_perc_pos,cor_pgr_perc_pos,default,plot
+130,core_tissue_surg_biopsy,cor_pgr_int,cor_pgr_int,default,plot
+131,core_tissue_surg_biopsy,cor_her2_status,cor_her2_status,default,plot
+132,core_tissue_surg_biopsy,cor_her2_scr,cor_her2_scr,default,plot
+133,core_tissue_surg_biopsy,cor_her2_fish,cor_her2_fish,default,plot
+134,core_tissue_surg_biopsy,cor_her2_fshres,cor_her2_fshres,default,plot
+135,core_tissue_surg_biopsy,cor_her2_fshratio,cor_her2_fshratio,default,plot
+136,core_tissue_surg_biopsy,cor_her2_fshcopy,cor_her2_fshcopy,default,plot
+137,core_tissue_surg_biopsy,cor_commnt,cor_commnt,default,table
+138,core_tissue_surg_biopsy,cor_oncdec,cor_oncdec,default,plot
+139,core_tissue_surg_biopsy,cor_oncdec_oth,cor_oncdec_oth,default,table
+140,core_tissue_surg_biopsy,cor_onctrt_asmets,cor_onctrt_asmets,default,plot
+141,core_tissue_surg_biopsy,cor_onctrt_erpos,cor_onctrt_erpos,default,plot
+142,core_tissue_surg_biopsy,cor_onctrt_herpos,cor_onctrt_herpos,default,plot
+143,core_tissue_surg_biopsy,cor_onctrt_tn,cor_onctrt_tn,default,plot
+144,planned_mets_treatment (Repeated Form),tplan,tplan,default,plot
+145,planned_mets_treatment (Repeated Form),tplan_name,tplan_name,default,plot
+146,planned_mets_treatment (Repeated Form),tplan_typ,tplan_typ,default,plot
+147,planned_mets_treatment (Repeated Form),tplan_dost,tplan_dost,default,plot
+148,planned_mets_treatment (Repeated Form),tplan_comm,tplan_comm,default,table
+149,blood_ctc_results,ctc_res,ctc_res,default,plot
+150,blood_ctc_results,ctc_num,ctc_num,default,plot
+151,blood_ctc_results,ctc_dotest,ctc_dotest,default,plot
+152,blood_ctc_results,ctc_rec,ctc_rec,default,plot
+153,blood_ctc_results,ctc_rec_perc,ctc_rec_perc,default,plot
+154,blood_ctc_results,ctc_her2,ctc_her2,default,plot
+155,blood_ctc_results,ctc_her2_perc,ctc_her2_perc,default,plot
+156,blood_ctc_results,ctc_comm,ctc_comm,default,table
+157,blood_ctc_results,ctc_dec,ctc_dec,default,plot
+158,blood_ctc_results,ctc_dec_oth,ctc_dec_oth,default,plot
+159,blood_ctdna_results,ctdna_res,ctdna_res,default,plot
+160,blood_ctdna_results,ctdna_num,ctdna_num,default,plot
+161,blood_ctdna_results,ctdna_dotest,ctdna_dotest,default,plot
+162,blood_ctdna_results,ctdna_rec,ctdna_rec,default,plot
+163,blood_ctdna_results,ctdna_rec_perc,ctdna_rec_perc,default,plot
+164,blood_ctdna_results,ctdna_her2,ctdna_her2,default,plot
+165,blood_ctdna_results,ctdna_her2_perc,ctdna_her2_perc,default,plot
+166,blood_ctdna_results,ctdna_comm,ctdna_comm,default,table
+167,blood_ctdna_results,ctdna_dec,ctdna_dec,default,plot
+168,blood_ctdna_results,ctdna_dec_oth,ctdna_dec_oth,default,table
+169,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_loccen,combined,table
+170,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_mrkr,combined,table
+171,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_mrkr_oth,combined,table
+172,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_dotest,combined,table
+173,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_res,combined,table
+174,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_rng_lo,combined,table
+175,blood_biomarker_results (Repeated Form),Data Table-blood biomarker results,bld_rng_hi,combined,table
+176,fup_inconclusive_biopsy,fup_doassess,fup_doassess,default,plot
+177,fup_inconclusive_biopsy,fup_imag,fup_imag,default,plot
+178,fup_inconclusive_biopsy,fup_meth,fup_meth,default,plot
+179,fup_inconclusive_biopsy,fup_dt_bscan,fup_dt_bscan,default,plot
+180,fup_inconclusive_biopsy,fup_interp_bscan,fup_interp_bscan,default,plot
+181,fup_inconclusive_biopsy,fup_dt_us,fup_dt_us,default,plot
+182,fup_inconclusive_biopsy,fup_interp_us,fup_interp_us,default,plot
+183,fup_inconclusive_biopsy,fup_dt_mri,fup_dt_mri,default,plot
+184,fup_inconclusive_biopsy,fup_interp_mri,fup_interp_mri,default,plot
+185,fup_inconclusive_biopsy,fup_dt_ct,fup_dt_ct,default,plot
+186,fup_inconclusive_biopsy,fup_interp_ct,fup_interp_ct,default,plot
+187,fup_inconclusive_biopsy,fup_dt_exam,fup_dt_exam,default,plot
+188,fup_inconclusive_biopsy,fup_interp_exam,fup_interp_exam,default,plot
+189,fup_inconclusive_biopsy,fup_othmeth,fup_othmeth,default,table
+190,fup_inconclusive_biopsy,fup_dt_othmeth,fup_dt_othmeth,default,table
+191,fup_inconclusive_biopsy,fup_interp_othmeth,fup_interp_othmeth,default,table
+192,fup_inconclusive_biopsy,fup_newbiop,fup_newbiop,default,plot
+193,fup_inconclusive_biopsy,fup_pathdec,fup_pathdec,default,plot
+194,fup_inconclusive_biopsy,fup_pathdec_oth,fup_pathdec_oth,default,table
+195,fup_inconclusive_biopsy,fup_oncdec,fup_oncdec,default,plot
+196,fup_inconclusive_biopsy,fup_oncdec_oth,fup_oncdec_oth,default,table
+197,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup,combined,table
+198,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_name,combined,table
+199,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_typ,combined,table
+200,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_dost,combined,table
+201,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_response,combined,table
+202,fup_mets_treatment (Repeated Form),Data Table-fup mets treatment,tfup_comm,combined,table
+203,tissue_collection,tiss_mets,tiss_mets,default,plot
+204,tissue_collection,tiss_mets_exp,tiss_mets_exp,default,plot
+205,tissue_collection,tiss_mets_typ,tiss_mets_typ,default,plot
+206,tissue_collection,tiss_mets_dorec,tiss_mets_dorec,default,plot
+207,tissue_collection,tiss_mets_dobiop,tiss_mets_dobiop,default,plot
+208,tissue_collection,tiss_mets_pathno,tiss_mets_pathno,default,plot
+209,tissue_collection,tiss_pri,tiss_pri,default,plot
+210,tissue_collection,tiss_pri_exp,tiss_pri_exp,default,plot
+211,tissue_collection,tiss_pri_typ,tiss_pri_typ,default,plot
+212,tissue_collection,tiss_pri_dorec,tiss_pri_dorec,default,plot
+213,tissue_collection,tiss_pri_dosurg,tiss_pri_dosurg,default,plot
+214,tissue_collection,tiss_pri_pathno,tiss_pri_pathno,default,plot
+215,additional_checks,Surgery Biopsey Date Comparison,vis_dobiop,difference,table
+216,additional_checks,Surgery Biopsey Date Comparison,cor_dobiop,difference,table
+217,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_asmets,interaction,table
+218,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_erpos,interaction,table
+219,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_herpos,interaction,table
+220,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_tn,interaction,table
