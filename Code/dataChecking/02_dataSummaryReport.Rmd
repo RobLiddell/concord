@@ -54,6 +54,7 @@ dataSummaryOutline %<>%
   mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y))) %>% 
   mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) %>% 
   mutate(graphicData=pmap(list(graphicData,tp,myLabel),~changeLabels(..1,..2,..3))) %>% 
+  mutate(section=str_replace_all(section,'_',' ') %>% str_to_title()) %>% 
   filter(ord%in%c(3,87,90,215,217))
 
 
