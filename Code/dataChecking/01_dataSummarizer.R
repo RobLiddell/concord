@@ -271,7 +271,7 @@ if(FALSE){
   dataSummaryOutline %<>%
     left_join(dataDict %>% select(varnm,rep,source,expandedVarnm,myLabel,shortcats,tp)) %>% 
     mutate(subsection=if_else(subsection==varnm,myLabel,subsection)) %>% 
-    select(-myLabel) %>% 
+    # select(myLabel) %>% 
     mutate(dataRows=if_else(is.na(rep),'',source),
            varnm=expandedVarnm) %>% 
     select(-rep,-source,-expandedVarnm) %>% 
@@ -282,6 +282,7 @@ if(FALSE){
               dataRows=first(dataRows),
               tp=list(tp),
               shortcats=list(shortcats),
+              myLabel=list(myLabel),
               graphicStyle=first(graphicStyle),
               graphic=first(graphic),
               .groups = 'drop') %>% 
@@ -306,6 +307,9 @@ if(FALSE){
   
   plotGenDefault <- function(graphicData,tp){
     
+    columnNames <- colnames(graphicData)[-c(1,2)]
+    visitID <- colnames(graphicData)[2]
+    
     pivotData <- graphicData %>% 
       pivot_longer(cols=-c(1,2))
     
@@ -325,13 +329,13 @@ if(FALSE){
       pull(grouped) %>% 
       {filter(pivotData,interaction(name,value)%in%.)} %>% 
       group_by(name,value) %>% 
-      summarise(vis_id=str_flatten(vis_id, ', '),.groups='drop')
+      summarise({{visitID}}:=str_flatten(.data[[visitID]], ', '),.groups='drop')
     
     
     p <- plotData %>% 
       ggplot(aes(x=value,fill=value,y=n)) +
       geom_col()+
-      geom_text(graphLabels,mapping=aes(y=5,x=value,label=vis_id),
+      geom_text(graphLabels,mapping=aes(y=5,x=value,label=.data[[visitID]]),
                 hjust = 0)+
       facet_grid(rows=vars(name),scales = 'free_y')+
       labs(y='Count',x=NULL)
@@ -345,27 +349,39 @@ if(FALSE){
     return(p)
   }
   
-  tableGen <- function(graphicData,graphicStyle,tp){
-    flxTbl <- switch(graphicStyle,
-                     default=tableGenDefault(graphicData,tp))
+  tableGen <- function(graphicData,graphicStyle,tp,subsection){
     
-    flxTbl %>% 
-      bg(i=seq(1,nrow(summaryData),2),bg='grey95')
+    flxTbl <- switch(graphicStyle,
+                     default=tableGenDefault(graphicData),
+                     combined=tableGenCombined(graphicData),
+                     difference=tableGenDifference(graphicData),
+                     `interaction`=tableGenInteraction(graphicData))
+    
+    nTableRows <- flxTbl %>% dim() %>% .$heights %>% length()-1
+    nTableCols <- flxTbl %>% dim() %>% .$widths %>% length()
+    
+    flxTbl <- flxTbl %>% 
+      bg(i=seq(1,nTableRows,2),bg='grey95') %>% 
+      add_header_row(values=subsection,colwidths = nTableCols)
+    
+    return(flxTbl)
   }
   
-  tableGenDefault <- function(graphicData,tp){
+  tableGenDefault <- function(graphicData){
     
     columnNames <- colnames(graphicData)[-c(1,2)]
+    visitID <- colnames(graphicData)[2]
     
     tableData <- graphicData %>% 
-      mutate(vis_id=as.numeric(vis_id),
+      mutate({{visitID}}:=as.numeric(.data[[visitID]]),
              across(all_of(columnNames),as.character)) %>% 
       mutate(across(all_of(columnNames),~str_replace_all(.x,'(?<=[0-9])\n(?=[0-9])','->'))) %>% 
       mutate(across(all_of(columnNames),~str_replace_all(.x,'\n',' '))) %>% 
+      filter(!is.na(.data[[columnNames]])) %>% 
       group_by(across(-c(1,2))) %>% 
-      summarise(firstID=first(vis_id),
-                vis_id=str_flatten(vis_id,', ')) %>% 
-      relocate(vis_id,.before=1) %>% 
+      summarise(firstID=first(.data[[visitID]]) %>% as.numeric(),
+                {{visitID}}:=str_flatten(.data[[visitID]],', ')) %>% 
+      relocate(all_of(visitID),.before=1) %>% 
       arrange(firstID) %>% 
       select(-firstID)
     
@@ -376,55 +392,85 @@ if(FALSE){
     return(flxTbl)
     
   }
-  figureGen <- function(graphicData,graphicStyle,graphic,dataType){
+  
+  tableGenCombined <- function(graphicData){
+    columnNames <- colnames(graphicData)[-c(1,2)]
+    visitID <- colnames(graphicData)[2]
+    
+    nColumns=ncol(graphicData)-1
+    
+    flxTbl <- graphicData %>%
+      select(-rowID) %>% 
+      flextable() %>% 
+      width(c(1:nColumns),width=c(0.5,rep(6.5/(nColumns-1),nColumns-1)))
+    
+    return(flxTbl)
+  }
+  
+  tableGenDifference <- function(graphicData){
+    
+    columnNames <- colnames(graphicData)[-c(1,2)]
+    visitID <- colnames(graphicData)[2]
+    
+    flxTbl <- graphicData %>% 
+      filter((.data[[columnNames[1]]]!=.data[[columnNames[2]]])|is.na(.data[[columnNames[1]]])|is.na(.data[[columnNames[2]]])) %>% 
+      select(-rowID) %>% 
+      mutate(across(.fns=as.character)) %>% 
+      flextable() %>% 
+      width(c(1:3),width=c(0.75,6.25/2,6.25/2))
+    
+    return(flxTbl)
+  }
+  
+  tableGenInteraction <- function(graphicData){
+    columnNames <- colnames(graphicData)[-c(1,2)]
+    visitID <- colnames(graphicData)[2]
+    tableData <- graphicData %>% 
+      select(-rowID) %>% 
+      group_by(across(-1)) %>% 
+      summarise(firstID=first(.data[[visitID]]) %>% as.numeric(),
+                {{visitID}}:=str_flatten(.data[[visitID]],', '),
+                .groups = 'drop') %>% 
+      arrange(firstID) %>% 
+      select(-firstID) %>% 
+      relocate(all_of(visitID),.before=1)
+    
+    nColumns=ncol(tableData)
+    
+    flxTbl <- tableData %>% 
+      flextable() %>% 
+      width(c(1:nColumns),c(1,rep(6/(nColumns-1),nColumns-1)))
+
+    return(flxTbl)
+    
+  }
+  
+  figureGen <- function(graphicData,graphicStyle,graphic,dataType,subsection){
+    
+    graphicData <- graphicData %>% 
+      rename(`Study ID`=vis_id) %>% 
+      relocate(`Study ID`,.after=1)
+    
     figure <- switch(graphic,
            plot=plotGen(graphicData,graphicStyle,dataType),
-           table=tableGen(graphicData,graphicStyle,dataType))
+           table=tableGen(graphicData,graphicStyle,dataType,subsection))
     return(figure)
   }
   
   dataSummaryOutline %>% 
-    filter(graphic=='plot') %>%
-    filter(ord%in%c(87)) %$% 
+    filter(ord==217)%$% 
+    # filter(ord%in%c(24)) %$% 
     # filter(ord%in%c(3:10,87)) %$% 
-    pmap(list(graphicData,graphicStyle,graphic,dataType),~figureGen(..1,..2,..3,..4))
+    pmap(list(graphicData,graphicStyle,graphic,dataType,subsection),~figureGen(..1,..2,..3,..4,..5))
 
     
+  graphicData <- dataSummaryOutline %>% 
+    filter(graphic=='table') %>%
+    filter(graphicStyle=='interaction') %>% 
+    pull(graphicData) %>% 
+    .[[1]]
   
   
-  tableSummarizer <- function(data,variableLabel){
-    
-    summaryData <- data %>% 
-      filter(value!='') %>% 
-      group_by(name,value) %>%
-      mutate(vis_id=as.numeric(vis_id),
-             value=str_replace_all(value,'(?<=[0-9])\n(?=[0-9])','->'),
-             value=str_replace_all(value,'\n',' ')) %>%
-      arrange(vis_id) %>% 
-      mutate(vis_id=as.character(vis_id)) %>% 
-      summarise(firstID=as.numeric(first(vis_id)),
-                vis_id=str_flatten(vis_id, collapse=', '),.groups = 'drop') %>% 
-      arrange(firstID) %>% 
-      select(vis_id,value)
-    
-    
-    # summaryData <- idValues %>% 
-    #   select(vis_id,value) %>% 
-    #   mutate(vis_id=as.character(vis_id),
-    #          value=str_replace_all(value,'\n','->')) %>%
-    #   group_by(value) %>% 
-    #   summarise(vis_id= str_flatten(vis_id, collapse=', ') ) %>% 
-    #   select(vis_id,value) %>% 
-    #   arrange(value)
-    
-    summaryTable <- summaryData %>% 
-      flextable() %>% 
-      width(2,6) %>% 
-      width(1,1) %>% 
-      add_header_row(values=variableLabel,colwidths = 2) %>% 
-      bg(i=seq(1,nrow(summaryData),2),bg='grey95')
-    return(summaryTable)
-  }
   
 
 
