@@ -37,80 +37,6 @@ stringNumToDate <- function(string){
   return(dateString)
 }
 
-formatDataLabels <- function(values){
-  values %>% 
-    str_remove_all('\"') %>% 
-    str_split_1(',') %>% 
-    str_wrap(11) %>% 
-    return()
-}
-
-plotSummarizer <- function(data,variableLabel,graphLabels){
-
-
-  dataBreaks <- data$value %>% 
-    levels()
-  
-  p <- data %>% 
-    ggplot(aes(y=value,fill=value)) +
-    scale_fill_grey(guide='none')+
-    scale_y_discrete(drop=FALSE)+
-    geom_bar()+
-    facet_grid(rows=vars(name))+
-    labs(x='Count', y=variableLabel)
-
-  
-  graphLabels <- graphLabels %>% 
-    group_by(name,value) %>% 
-    summarise(vis_id=list(vis_id),.groups='drop') %>% 
-    rowwise() %>% 
-    mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
-    ungroup()
-  
-  
-  p <- p+
-    geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
-              hjust = 0)
-  
-  
-  return(p)
-}
-
-tableSummarizer <- function(data,variableLabel){
-  
-  summaryData <- data %>% 
-    filter(value!='') %>% 
-    group_by(name,value) %>%
-    mutate(vis_id=as.numeric(vis_id),
-           value=str_replace_all(value,'(?<=[0-9])\n(?=[0-9])','->'),
-           value=str_replace_all(value,'\n',' ')) %>%
-    arrange(vis_id) %>% 
-    mutate(vis_id=as.character(vis_id)) %>% 
-    summarise(firstID=as.numeric(first(vis_id)),
-              vis_id=str_flatten(vis_id, collapse=', '),.groups = 'drop') %>% 
-    arrange(firstID) %>% 
-    select(vis_id,value)
-    
-
-  # summaryData <- idValues %>% 
-  #   select(vis_id,value) %>% 
-  #   mutate(vis_id=as.character(vis_id),
-  #          value=str_replace_all(value,'\n','->')) %>%
-  #   group_by(value) %>% 
-  #   summarise(vis_id= str_flatten(vis_id, collapse=', ') ) %>% 
-  #   select(vis_id,value) %>% 
-  #   arrange(value)
-  
-  summaryTable <- summaryData %>% 
-    flextable() %>% 
-    width(2,6) %>% 
-    width(1,1) %>% 
-    add_header_row(values=variableLabel,colwidths = 2) %>% 
-    bg(i=seq(1,nrow(summaryData),2),bg='grey95')
-  return(summaryTable)
-}
-
-
 ####getData Function####
 
 #getData uses variableName, instrument label, dataType, and values to find and 
@@ -131,29 +57,29 @@ getData <- function(data,variableName,instrumentLabel){
 
 ####Summary Data Formatting####
 
-formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabels){
-  
-  if(dataType == '01'){
-    
-    checkBoxVariables <- paste0(variableName,'___',variableValues)
-    
-    data <- data %>% 
-      mutate(name = factor(name,levels=checkBoxVariables,labels = dataLabels %>% str_wrap(11)))
-  }
-  
-  
-  data$value <- switch (dataType,
-    `$` = data$value %>% as.character() %>% str_wrap(20) %>% factor(),
-    `01` = data$value %>% factor(levels=c(1,0)),
-    `##` = data$value %>% as.numeric(),
-    `#` = data$value %>%  as.integer(),
-    `dt` = data$value %>% ymd() %>% as.integer(),
-    `b` = data$value %>%  factor(levels=variableValues,labels = dataLabels) %>% str_wrap(11) %>% fct_rev(),
-    `b0` = data$value %>% factor(levels=variableValues,labels = variableValues) %>% fct_rev()
-    )
-  
-  return(data)
-}
+# formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabels){
+#   
+#   if(dataType == '01'){
+#     
+#     checkBoxVariables <- paste0(variableName,'___',variableValues)
+#     
+#     data <- data %>% 
+#       mutate(name = factor(name,levels=checkBoxVariables,labels = dataLabels %>% str_wrap(11)))
+#   }
+#   
+#   
+#   data$value <- switch (dataType,
+#     `$` = data$value %>% as.character() %>% str_wrap(20) %>% factor(),
+#     `01` = data$value %>% factor(levels=c(1,0)),
+#     `##` = data$value %>% as.numeric(),
+#     `#` = data$value %>%  as.integer(),
+#     `dt` = data$value %>% ymd() %>% as.integer(),
+#     `b` = data$value %>%  factor(levels=variableValues,labels = dataLabels) %>% str_wrap(11) %>% fct_rev(),
+#     `b0` = data$value %>% factor(levels=variableValues,labels = variableValues) %>% fct_rev()
+#     )
+#   
+#   return(data)
+# }
 
 
 
@@ -226,32 +152,32 @@ cutData <- function(graphicData,dataTypeList,graphicStyle,graphic){
 
 #variableSummarizer takes data and returns an appropriate visual summary 
 #based on the data type
-variableSummarizer <- function(data, variableLabel){
-
-  lowCounts <- data %>% 
-    group_by(name) %>% 
-    count(value) %>% 
-    filter(n<=5) %>% 
-    select(name,value)
-  
-  idsToAdd <- data %>% 
-    filter(interaction(name,value)%in%interaction(lowCounts$name,lowCounts$value)) %>% 
-    select(name,value,ord,vis_id)
-  
-  plotType='default'
-  tableType='default'
-  
-  figurePlot <- switch(plotType,
-         default=plotSummarizer(data,variableLabel,idsToAdd))
-  
-  
-  figureTable <- switch(tableType,
-                        default=tableSummarizer(data,variableLabel))
-
-
-  tibble(summaryPlot=list(figurePlot),summaryTable=list(figureTable),lowCountIds=list(idsToAdd)) %>% 
-  return()
-}
+# variableSummarizer <- function(data, variableLabel){
+# 
+#   lowCounts <- data %>% 
+#     group_by(name) %>% 
+#     count(value) %>% 
+#     filter(n<=5) %>% 
+#     select(name,value)
+#   
+#   idsToAdd <- data %>% 
+#     filter(interaction(name,value)%in%interaction(lowCounts$name,lowCounts$value)) %>% 
+#     select(name,value,ord,vis_id)
+#   
+#   plotType='default'
+#   tableType='default'
+#   
+#   figurePlot <- switch(plotType,
+#          default=plotSummarizer(data,variableLabel,idsToAdd))
+#   
+#   
+#   figureTable <- switch(tableType,
+#                         default=tableSummarizer(data,variableLabel))
+# 
+# 
+#   tibble(summaryPlot=list(figurePlot),summaryTable=list(figureTable),lowCountIds=list(idsToAdd)) %>% 
+#   return()
+# }
 
 
 
@@ -458,15 +384,13 @@ if(FALSE){
   }
   
   dataSummaryOutline %>% 
-    filter(ord==217)%$% 
-    # filter(ord%in%c(24)) %$% 
-    # filter(ord%in%c(3:10,87)) %$% 
-    pmap(list(graphicData,graphicStyle,graphic,dataType,subsection),~figureGen(..1,..2,..3,..4,..5))
+    filter(ord%in%c(3,90,215,217))%$% 
+    pmap(list(graphicData,graphicStyle,graphic,tp,subsection),~figureGen(..1,..2,..3,..4,..5))
 
     
   graphicData <- dataSummaryOutline %>% 
-    filter(graphic=='table') %>%
-    filter(graphicStyle=='interaction') %>% 
+    filter(graphic=='plot') %>%
+    filter(graphicStyle=='default') %>% 
     pull(graphicData) %>% 
     .[[1]]
   
