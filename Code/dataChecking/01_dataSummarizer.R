@@ -15,35 +15,16 @@ library(flextable)
 ####Data Loading####
 #load the ConcordanceStudy Data
 
-##Source the second file to load data
-dataLoc <- 'Data/raw'
+##Sourcing this file provides the data, dataDictionary
+##and expanded variable info for the 
 
-source("Data/raw/02 ConcordanceStudy_R_2022-12-30_1413.r") 
-data <- data %>% 
-  tibble() %>% 
-  mutate(ord=row_number(),.before = vis_id)
-
-
-#ConcordanceStudy Data Dictionary
-dataDictLoc <- 'Data/meta/02 CONCORD REDCap for data management2021-11-26.xlsx'
-
-dataDict <- read_xlsx(dataDictLoc,
-          sheet=2,
-          skipEmptyCols = T) %>% 
-  tibble() %>% 
-  slice(-1)
-
+source("Code/dataChecking/03 Redcap Data Reader.r") 
+data 
+dataDict
+allVariableInfo
 currentDate=ymd('2021-11-26')
 
-#ConcordanceStudy Summary Graphic Type
-dataGraphicTypeLoc <- 'Data/meta/03 CONCORD REDCap Summary Type.xlsx'
 
-dataDict <- read_xlsx(dataGraphicTypeLoc,
-                         sheet=1,
-                         skipEmptyRows = TRUE,
-                         skipEmptyCols = TRUE) %>% 
-  tibble() %>% 
-  {left_join(dataDict,.)}
 
 ####Helper Functions####
 
@@ -56,308 +37,312 @@ stringNumToDate <- function(string){
   return(dateString)
 }
 
-formatDataLabels <- function(values){
-  values %>% 
-    str_remove_all('\"') %>% 
-    str_split_1(',') %>% 
-    str_wrap(11) %>% 
-    return()
-}
-
-plotSummarizer <- function(data,variableLabel,graphLabels){
-
-
-  dataBreaks <- data$value %>% 
-    levels()
-  
-  p <- data %>% 
-    ggplot(aes(y=value,fill=value)) +
-    scale_fill_grey(guide='none')+
-    scale_y_discrete(drop=FALSE)+
-    geom_bar()+
-    facet_grid(rows=vars(name))+
-    labs(x='Count', y=variableLabel)
-
-  
-  graphLabels <- graphLabels %>% 
-    group_by(name,value) %>% 
-    summarise(vis_id=list(vis_id),.groups='drop') %>% 
-    rowwise() %>% 
-    mutate(vis_id=paste0(vis_id,collapse=', ')) %>% 
-    ungroup()
-  
-  
-  p <- p+
-    geom_text(graphLabels,mapping=aes(x=5,y=value,label=vis_id),
-              hjust = 0)
-  
-  
-  return(p)
-}
-
-tableSummarizer <- function(data,variableLabel){
-  
-  summaryData <- data %>% 
-    filter(value!='') %>% 
-    group_by(name,value) %>%
-    mutate(vis_id=as.numeric(vis_id),
-           value=str_replace_all(value,'(?<=[0-9])\n(?=[0-9])','->'),
-           value=str_replace_all(value,'\n',' ')) %>%
-    arrange(vis_id) %>% 
-    mutate(vis_id=as.character(vis_id)) %>% 
-    summarise(firstID=as.numeric(first(vis_id)),
-              vis_id=str_flatten(vis_id, collapse=', '),.groups = 'drop') %>% 
-    arrange(firstID) %>% 
-    select(vis_id,value)
-    
-
-  # summaryData <- idValues %>% 
-  #   select(vis_id,value) %>% 
-  #   mutate(vis_id=as.character(vis_id),
-  #          value=str_replace_all(value,'\n','->')) %>%
-  #   group_by(value) %>% 
-  #   summarise(vis_id= str_flatten(vis_id, collapse=', ') ) %>% 
-  #   select(vis_id,value) %>% 
-  #   arrange(value)
-  
-  summaryTable <- summaryData %>% 
-    flextable() %>% 
-    width(2,6) %>% 
-    width(1,1) %>% 
-    add_header_row(values=variableLabel,colwidths = 2) %>% 
-    bg(i=seq(1,nrow(summaryData),2),bg='grey95')
-  return(summaryTable)
-}
-
-
-####getData Function####
+#Subset Data with getData####
 
 #getData uses variableName, instrument label, dataType, and values to find and 
 #return the appropriate data from 'data'
 #Return data for each variable along with row number and vis id
-getData <- function(data,variableName,instrumentLabel,dataType,values){
+getData <- function(data,variableName,instrumentLabel){
   
-  if(dataType=='01'){
-    
-    checkBoxVariables <- paste0(variableName,'___',values)
-
-    returnDat <- data %>%
-      filter(redcap_repeat_instrument==instrumentLabel) %>%
-      select(ord,vis_id,all_of(checkBoxVariables)) %>% 
-      mutate(across(all_of(checkBoxVariables),~as.numeric(.x))) %>% 
-      pivot_longer(cols=all_of(checkBoxVariables))
-    
-  }else{
-    returnDat <- filter(data,redcap_repeat_instrument==instrumentLabel) %>% 
-      select(ord,vis_id,all_of(variableName)) %>% 
-      pivot_longer(cols=all_of(variableName))
-  }
+  data <- data %>% 
+    mutate(redcap_repeat_instrument=if_else(is.na(redcap_repeat_instrument),'',
+                                            redcap_repeat_instrument))
   
+  returnDat <- data %>%
+    filter(redcap_repeat_instrument==instrumentLabel) %>%
+    select(rowID,vis_id,all_of(variableName))
+    
   return(returnDat)
 }
 
-####Summary Data Formatting####
+#Cutting up Continuous Data####
 
-formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabels){
+cutData <- function(graphicData,dataTypeList,graphicStyle,graphic){
   
-  if(dataType == '01'){
-    
-    checkBoxVariables <- paste0(variableName,'___',variableValues)
-    
-    data <- data %>% 
-      mutate(name = factor(name,levels=checkBoxVariables,labels = dataLabels %>% str_wrap(11)))
+  if(graphicStyle!='default'){
+    return(graphicData)
+  }else if(graphic == 'table'){
+    return(graphicData)
   }
   
-  
-  data$value <- switch (dataType,
-    `$` = data$value %>% as.character() %>% str_wrap(20) %>% factor(),
-    `01` = data$value %>% factor(levels=c(1,0)),
-    `##` = data$value %>% as.numeric(),
-    `#` = data$value %>%  as.integer(),
-    `dt` = data$value %>% ymd() %>% as.integer(),
-    `b` = data$value %>%  factor(levels=variableValues,labels = dataLabels) %>% str_wrap(11) %>% fct_rev(),
-    `b0` = data$value %>% factor(levels=variableValues,labels = variableValues) %>% fct_rev()
-    )
-  
-  return(data)
-}
-
-
-
-####Cutting up Continuous Data####
-
-
-  
-
-
-
-dataCutting <- function(data,dataType){
-  
-  if(dataType%in%c('$','01','b','b0')){
-    return(data)
-  }
-  
-  nGroups <- data %>% 
-    distinct(value) %>% 
-    pull(value) %>% 
-    length()
-
-  if(nGroups<=10){
+  cutColumn <- function(graphicData,variableName,dataType){
     
-    data <- data %>% 
-      mutate(value=factor(value) %>% fct_rev())
+    if(dataType%in%c('$','01','b','b0')){
+      return()
+    }
+    
+    nGroups <- graphicData %>% 
+      distinct(across(all_of(variableName))) %>% 
+      pull(variableName) %>% 
+      length()
+    
+    if(nGroups<=10){
+      
+      graphicData <- graphicData %>% 
+        mutate({{variableName}}:=factor(.data[[variableName]]) %>% fct_rev())
+      graphicData[[variableName]] <<- graphicData[[variableName]]
+      return()
+    }
     
     if(dataType=='dt'){
-      levels(data$value) <- levels(data$value) %>% 
+      graphicData <- graphicData %>%
+        mutate({{variableName}}:=as.numeric(.data[[variableName]]))
+    }
+    
+    graphicData <- graphicData %>% 
+      mutate({{variableName}}:=cut(.data[[variableName]],10),
+             {{variableName}}:=fct_rev(.data[[variableName]]))
+    
+    if(dataType=='dt'){
+      levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
         str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
         str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
         str_replace('[0-9]{5}',stringNumToDate)
     }
+    levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
+      str_remove_all('[\\(\\]]') %>% 
+      str_replace(',','\n') 
     
-    return(data)
+    graphicData[[variableName]] <<- graphicData[[variableName]]
+    #assign('test',test,envir=.GlobalEnv) may want to implement this to be more specific about assignment environment
+    
   }
   
-  data <- data %>% 
-    mutate(value=cut(value,10),
-           value=fct_rev(value))
+  tibble(dataType=dataTypeList,dataColumns=colnames(graphicData)[3:ncol(graphicData)])%$%
+    walk2(dataColumns,dataType,~cutColumn(graphicData,.x,.y))
   
-  if(dataType=='dt'){
-    levels(data$value) <- levels(data$value) %>% 
-      str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
-      str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
-      str_replace('[0-9]{5}',stringNumToDate)
-  }
-  levels(data$value) <- levels(data$value) %>% 
-    str_remove_all('[\\(\\]]') %>% 
-    str_replace(',','\n') 
+  return(graphicData)
   
-  return(data)
+  
+} 
+
+#Figure Generating Functions####
+
+figureGen <- function(graphicData,graphicStyle,graphic,dataType,subsection){
+  
+  graphicData <- graphicData %>% 
+    rename(`Study ID`=vis_id) %>% 
+    relocate(`Study ID`,.after=1)
+  
+  figure <- switch(graphic,
+                   plot=plotGen(graphicData,graphicStyle,dataType),
+                   table=tableGen(graphicData,graphicStyle,dataType,subsection))
+  return(figure)
+}
+
+#Table Generating Functions####
+
+tableGen <- function(graphicData,graphicStyle,tp,subsection){
+  
+  flxTbl <- switch(graphicStyle,
+                   default=tableGenDefault(graphicData),
+                   combined=tableGenCombined(graphicData),
+                   difference=tableGenDifference(graphicData),
+                   `interaction`=tableGenInteraction(graphicData))
+  
+  nTableRows <- flxTbl %>% dim() %>% .$heights %>% length()-1
+  nTableCols <- flxTbl %>% dim() %>% .$widths %>% length()
+  
+  flxTbl <- flxTbl %>% 
+    bg(i=seq(1,nTableRows,2),bg='grey95') %>% 
+    add_header_row(values=subsection,colwidths = nTableCols)
+  
+  return(flxTbl)
+}
+
+tableGenDefault <- function(graphicData){
+  
+  columnNames <- colnames(graphicData)[-c(1,2)]
+  visitID <- colnames(graphicData)[2]
+  
+  tableData <- graphicData %>% 
+    mutate({{visitID}}:=as.numeric(.data[[visitID]]),
+           across(all_of(columnNames),as.character)) %>% 
+    mutate(across(all_of(columnNames),~str_replace_all(.x,'(?<=[0-9])\n(?=[0-9])','->'))) %>% 
+    mutate(across(all_of(columnNames),~str_replace_all(.x,'\n',' '))) %>% 
+    filter(!is.na(.data[[columnNames]])) %>% 
+    group_by(across(-c(1,2))) %>% 
+    summarise(firstID=first(.data[[visitID]]) %>% as.numeric(),
+              {{visitID}}:=str_flatten(.data[[visitID]],', ')) %>% 
+    relocate(all_of(visitID),.before=1) %>% 
+    arrange(firstID) %>% 
+    select(-firstID)
+  
+  flxTbl <- tableData %>% 
+    flextable() %>% 
+    width(c(1,2),c(2,5)) 
+  
+  return(flxTbl)
   
 }
 
+tableGenCombined <- function(graphicData){
+  columnNames <- colnames(graphicData)[-c(1,2)]
+  visitID <- colnames(graphicData)[2]
+  
+  nColumns=ncol(graphicData)-1
+  
+  flxTbl <- graphicData %>%
+    select(-rowID) %>% 
+    flextable() %>% 
+    width(c(1:nColumns),width=c(0.5,rep(6.5/(nColumns-1),nColumns-1)))
+  
+  return(flxTbl)
+}
 
-#variableSummarizer takes data and returns an appropriate visual summary 
-#based on the data type
-variableSummarizer <- function(data, variableLabel){
+tableGenDifference <- function(graphicData){
+  
+  columnNames <- colnames(graphicData)[-c(1,2)]
+  visitID <- colnames(graphicData)[2]
+  
+  flxTbl <- graphicData %>% 
+    filter((.data[[columnNames[1]]]!=.data[[columnNames[2]]])|is.na(.data[[columnNames[1]]])|is.na(.data[[columnNames[2]]])) %>% 
+    select(-rowID) %>% 
+    mutate(across(.fns=as.character)) %>% 
+    flextable() %>% 
+    width(c(1:3),width=c(0.75,6.25/2,6.25/2))
+  
+  return(flxTbl)
+}
 
-  lowCounts <- data %>% 
+tableGenInteraction <- function(graphicData){
+  columnNames <- colnames(graphicData)[-c(1,2)]
+  visitID <- colnames(graphicData)[2]
+  tableData <- graphicData %>% 
+    select(-rowID) %>% 
+    group_by(across(-1)) %>% 
+    summarise(firstID=first(.data[[visitID]]) %>% as.numeric(),
+              {{visitID}}:=str_flatten(.data[[visitID]],', '),
+              .groups = 'drop') %>% 
+    arrange(firstID) %>% 
+    select(-firstID) %>% 
+    relocate(all_of(visitID),.before=1)
+  
+  nColumns=ncol(tableData)
+  
+  flxTbl <- tableData %>% 
+    flextable() %>% 
+    width(c(1:nColumns),c(2,rep(5/(nColumns-1),nColumns-1)))
+  
+  return(flxTbl)
+  
+}
+
+#Plot Generating Function####
+
+plotGen <- function(graphicData,graphicStyle,tp){
+  
+  p <- switch(graphicStyle,
+              default=plotGenDefault(graphicData,tp))
+  
+  p <- p +
+    scale_fill_grey(guide='none')+
+    coord_flip()
+  
+  return(p)
+}
+
+plotGenDefault <- function(graphicData,tp){
+  
+  columnNames <- colnames(graphicData)[-c(1,2)]
+  visitID <- colnames(graphicData)[2]
+  
+  pivotData <- graphicData %>% 
+    pivot_longer(cols=-c(1,2))
+  
+  tp <- tp[[1]]
+  
+  if(tp%in%c('01','b','$')){
+    levels(pivotData$value) <- levels(pivotData$value) %>% 
+      str_wrap(11)
+  }
+  
+  plotData <- pivotData %>% 
     group_by(name) %>% 
     count(value) %>% 
-    filter(n<=5) %>% 
-    select(name,value)
+    ungroup() 
   
-  idsToAdd <- data %>% 
-    filter(interaction(name,value)%in%interaction(lowCounts$name,lowCounts$value)) %>% 
-    select(name,value,ord,vis_id)
-  
-  plotType='default'
-  tableType='default'
-  
-  figurePlot <- switch(plotType,
-         default=plotSummarizer(data,variableLabel,idsToAdd))
+  graphLabels <- plotData %>% 
+    filter(n<=5) %>%
+    mutate(grouped=interaction(name,value)) %>% 
+    pull(grouped) %>% 
+    {filter(pivotData,interaction(name,value)%in%.)} %>% 
+    group_by(name,value) %>% 
+    summarise({{visitID}}:=str_flatten(.data[[visitID]], ', '),.groups='drop')
   
   
-  figureTable <- switch(tableType,
-                        default=tableSummarizer(data,variableLabel))
-
-
-  tibble(summaryPlot=list(figurePlot),summaryTable=list(figureTable),lowCountIds=list(idsToAdd)) %>% 
-  return()
+  p <- plotData %>% 
+    ggplot(aes(x=value,fill=value,y=n)) +
+    geom_col()+
+    geom_text(graphLabels,mapping=aes(y=5,x=value,label=.data[[visitID]]),
+              hjust = 0)+
+    facet_grid(rows=vars(name),scales = 'free_y')+
+    labs(y='Count',x=NULL)
+  
+  if(tp=='01'){
+    p <- p + scale_x_discrete(drop=TRUE)
+  }else{
+    p <- p + scale_x_discrete(drop=FALSE)
+  }
+  
+  return(p)
 }
-
-
-
 
 ####Testing and Output####
 
 if(FALSE){
-  variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
   
+  #ConcordanceStudy Summary Graphic Type
+  dataGraphicTypeLoc <- 'Code/reportRender/dataSummaryReportOutline.csv'
+  reportRows <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202,215:220)
+  dataSummaryOutline <- read_csv(dataGraphicTypeLoc) %>% 
+    slice(reportRows)
+    
   
-dataSummary <- dataDict %>% 
-  slice(variableNumbers) %>%
-  mutate(rep=if_else(is.na(rep),'',source),
-         values=str_remove_all(values,'\"') %>% str_split(','),
-         shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>% 
-  mutate(dat=pmap(list(varnm,rep,tp,values),
-                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
-  mutate(dat=pmap(list(dat,tp,varnm,values,shortcats),
-                  ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
-  mutate(dat=pmap(list(dat,tp),
-                  ~dataCutting(..1,..2))) %>% 
-  mutate(summaryOutput=pmap(list(dat,myLabel),
-                            ~variableSummarizer(..1,..2)))
-  
-}
 
-
-####Formatting Full Table####
-
-if(FALSE){
-  
-  
-  shortcatsCheckBoxFormatting <- function(tp,varnm,values,shortcats){
-    if(tp=='01'){
-      variableValue=str_extract(varnm,'(?<=[_]{3})[0-9]+')
-      variableLabelIndex=which(values==variableValue)
-      return(shortcats[variableLabelIndex])
-    }
-    return(shortcats)
-  }
-  
-  valueCheckBoxFormatting <- function(tp,varnm,values){
-    if(tp=='01'){
-      return(str_extract(varnm,'(?<=[_]{3})[0-9]+'))
-    }
-    return(values)
-  }
-  
-  
-  dataTypeChanging <- dataDict %>% 
-    select(varnm,tp,values,shortcats) %>% 
-    mutate(values=str_remove_all(values,'\"') %>% str_split(','),
-           shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>%
-    mutate(varnm=if_else(tp=='01',map2(varnm,values,function(.x,.y) (paste0(.x,'___',.y))),map(varnm,function(.x) (.x)))) %>% 
+  dataSummaryOutline %<>%
+    left_join(dataDict %>% select(varnm,rep,source,expandedVarnm,myLabel,shortcats,tp)) %>% 
+    mutate(subsection=if_else(subsection==varnm,myLabel,subsection)) %>% 
+    # select(myLabel) %>% 
+    mutate(dataRows=if_else(is.na(rep),'',source),
+           varnm=expandedVarnm) %>% 
+    select(-rep,-source,-expandedVarnm) %>% 
     unnest_longer(varnm) %>% 
-    left_join(tibble(varnm=colnames(data)) %>% 
-                mutate(row=row_number())) %>%
-    # filter(str_detect(varnm,'cl_mets')) %>% 
-    mutate(shortcats=pmap(list(tp,varnm,values,shortcats),~shortcatsCheckBoxFormatting(..1,..2,..3,..4)),
-           values=pmap(list(tp,varnm,values),~valueCheckBoxFormatting(..1,..2,..3))) 
+    group_by(section,subsection) %>% 
+    summarise(ord=first(ord),
+              varnm=list(varnm),
+              dataRows=first(dataRows),
+              tp=list(tp),
+              shortcats=list(shortcats),
+              myLabel=list(myLabel),
+              graphicStyle=first(graphicStyle),
+              graphic=first(graphic),
+              .groups = 'drop') %>% 
+    arrange(ord) %>% 
+    relocate(ord,.before = 1) %>% 
+    mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y))) %>% 
+    mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) 
   
   
-  
-  
-  loadedData <- data %>% 
-    select(ord,starts_with('redcap_'))
-  
-  for(i in 1:nrow(dataTypeChanging)){
-    currentVariable=dataTypeChanging$varnm[[i]]
-    currentDataType=dataTypeChanging$tp[[i]]
-    currentDataValues=dataTypeChanging$values[[i]]
-    currentDataLabels=dataTypeChanging$shortcats[[i]]
+  dataSummaryOutline %>% 
+    filter(ord%in%c(3,87,90,215,217))%$% 
+    pmap(list(graphicData,graphicStyle,graphic,tp,subsection),~figureGen(..1,..2,..3,..4,..5))
+
     
-    currentData <- data[[currentVariable]]
-    
-    
-    currentData <- switch (currentDataType,
-                           `$` = currentData %>% as.character() %>% str_wrap(20) %>% factor(exclude=c('',NA)),
-                           `01` =currentData %>% factor(levels=c(1,0),labels=c(currentDataLabels,'0')),
-                           `##` = currentData %>% as.numeric(),
-                           `#` = currentData %>%  as.integer(),
-                           `dt` = currentData %>% ymd() %>% as.integer(),
-                           `b` = currentData %>%  factor(levels=currentDataValues,labels = currentDataLabels) %>% str_wrap(11) %>% fct_rev(),
-                           `b0` = currentData %>% factor(levels=currentDataValues,labels = currentDataValues) %>% fct_rev())
-    loadedData[[currentVariable]] <- currentData
-    
-  }
+  graphicData <- dataSummaryOutline %>% 
+    filter(graphic=='plot') %>%
+    filter(graphicStyle=='default') %>% 
+    pull(graphicData) %>% 
+    .[[1]]
   
-  loadedData
   
-  colnames(data[1])
   
-  data
-  
+
+
+
 }
+
+
+
 
 
