@@ -160,58 +160,68 @@ formatSummaryData <- function(data,dataType,variableName,variableValues,dataLabe
 ####Cutting up Continuous Data####
 
 
+cutData <- function(graphicData,dataTypeList,graphicStyle,graphic){
   
-
-
-
-dataCutting <- function(data,dataType){
-  
-  if(dataType%in%c('$','01','b','b0')){
-    return(data)
+  if(graphicStyle!='default'){
+    return(graphicData)
+  }else if(graphic == 'table'){
+    return(graphicData)
   }
   
-  nGroups <- data %>% 
-    distinct(value) %>% 
-    pull(value) %>% 
-    length()
-
-  if(nGroups<=10){
+  cutColumn <- function(graphicData,variableName,dataType){
     
-    data <- data %>% 
-      mutate(value=factor(value) %>% fct_rev())
+    if(dataType%in%c('$','01','b','b0')){
+      return()
+    }
     
-    # if(dataType=='dt'){
-    #   levels(data$value) <- levels(data$value) %>% 
-    #     str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
-    #     str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
-    #     str_replace('[0-9]{5}',stringNumToDate)
-    # }
+    nGroups <- graphicData %>% 
+      distinct(across(all_of(variableName))) %>% 
+      pull(variableName) %>% 
+      length()
     
-    return(data)
+    if(nGroups<=10){
+      
+      graphicData <- graphicData %>% 
+        mutate({{variableName}}:=factor(.data[[variableName]]) %>% fct_rev())
+      graphicData[[variableName]] <<- graphicData[[variableName]]
+      return()
+    }
+    
+    if(dataType=='dt'){
+      graphicData <- graphicData %>%
+        mutate({{variableName}}:=as.numeric(.data[[variableName]]))
+    }
+    
+    graphicData <- graphicData %>% 
+      mutate({{variableName}}:=cut(.data[[variableName]],10),
+             {{variableName}}:=fct_rev(.data[[variableName]]))
+    
+    if(dataType=='dt'){
+      levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
+        str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
+        str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
+        str_replace('[0-9]{5}',stringNumToDate)
+    }
+    levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
+      str_remove_all('[\\(\\]]') %>% 
+      str_replace(',','\n') 
+    
+    graphicData[[variableName]] <<- graphicData[[variableName]]
+    #assign('test',test,envir=.GlobalEnv) may want to implement this to be more specific about assignment environment
+    
   }
   
-  if(dataType=='dt'){
-    data <- data %>%
-      mutate(value=as.numeric(value))
-  }
+  tibble(dataType=dataTypeList,dataColumns=colnames(graphicData)[3:ncol(graphicData)])%$%
+    walk2(dataColumns,dataType,~cutColumn(graphicData,.x,.y))
   
-  data <- data %>% 
-    mutate(value=cut(value,10),
-           value=fct_rev(value))
+  return(graphicData)
   
-  if(dataType=='dt'){
-    levels(data$value) <- levels(data$value) %>% 
-      str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
-      str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
-      str_replace('[0-9]{5}',stringNumToDate)
-  }
-  levels(data$value) <- levels(data$value) %>% 
-    str_remove_all('[\\(\\]]') %>% 
-    str_replace(',','\n') 
   
-  return(data)
-  
-}
+} 
+
+
+
+
 
 
 #variableSummarizer takes data and returns an appropriate visual summary 
@@ -277,80 +287,45 @@ if(FALSE){
               .groups = 'drop') %>% 
     arrange(ord) %>% 
     relocate(ord,.before = 1) %>% 
-    mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y)))
-  
-  dataSummaryOutline %>% 
-    filter(graphic=='plot') %>% 
+    mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y))) %>% 
     mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) 
   
-
-  testData <- dataSummaryOutline %>% 
-    filter(graphic=='plot') %>% 
-    filter(ord=='3')
   
-  cutData <- function(graphicData,dataTypeList,graphicStyle){
+  
+  plotGen <- function(graphicData,graphicStyle,tp){
+    plotData <- graphicData %>% 
+      pivot_longer(cols=-c(1,2)) 
     
-    if(graphicStyle!='default'){
-      return(graphicData)
-    }else if(graphic == 'table'){
-      return(graphicData)
-    }
+    lowCounts <- plotData %>% 
+      group_by(name) %>% 
+      count(value) %>% 
+      ungroup() 
     
-    cutColumn <- function(graphicData,variableName,dataType){
-
-      if(dataType%in%c('$','01','b','b0')){
-        return()
-      }
+    lowCounts %>% 
+      filter(graphicData,interaction(name,value)%in%interaction(.data[[]]))
       
-      nGroups <- graphicData %>% 
-        distinct(across(all_of(variableName))) %>% 
-        pull(variableName) %>% 
-        length()
-      
-      if(nGroups<=10){
-        
-        graphicData <- graphicData %>% 
-          mutate({{variableName}}:=factor(.data[[variableName]]) %>% fct_rev())
-        graphicData[[variableName]] <<- graphicData[[variableName]]
-        return()
-      }
-      
-      if(dataType=='dt'){
-        graphicData <- graphicData %>%
-          mutate({{variableName}}:=as.numeric(.data[[variableName]]))
-      }
-      
-      graphicData <- graphicData %>% 
-        mutate({{variableName}}:=cut(.data[[variableName]],10),
-               {{variableName}}:=fct_rev(.data[[variableName]]))
-      
-      if(dataType=='dt'){
-        levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
-          str_replace('(?<=\\().*?(?=,)',stringNumToDate) %>% 
-          str_replace('(?<=,).*?(?=\\])',stringNumToDate) %>% 
-          str_replace('[0-9]{5}',stringNumToDate)
-      }
-      levels(graphicData[[variableName]]) <- levels(graphicData[[variableName]]) %>% 
-        str_remove_all('[\\(\\]]') %>% 
-        str_replace(',','\n') 
-      
-      graphicData[[variableName]] <<- graphicData[[variableName]]
-      #assign('test',test,envir=.GlobalEnv) may want to implement this to be more specific about assignment environment
-      
-    }
-    
-    
-    # graphicData <- testData$graphicData[[1]]
-    # graphicStyle <- testData$graphicStyle[[1]]
-    # dataTypeList <- testData$tp[[1]]
-    
-    tibble(dataType=dataTypeList,dataColumns=colnames(graphicData)[3:ncol(graphicData)])%$%
-      walk2(dataColumns,dataType,~cutColumn(graphicData,.x,.y))
-    
-    return(graphicData)
-    
-
   }
+  
+  
+  figureGen <- function(graphicData,graphicStyle,graphic,dataType){
+    figure <- switch(graphic,
+           plot=plotGen(graphicData,graphicStyle,dataType),
+           table=tableGen(graphicData,graphicStyle,dataType))
+    return(figure)
+  }
+  
+  graphicData <- dataSummaryOutline %>% 
+    filter(graphic=='plot') %>% 
+    filter(ord==3) %>% 
+    pull(graphicData) %>% 
+    .[[1]] 
+
+    
+  
+  
+
+  
+
 
 
 }
