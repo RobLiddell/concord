@@ -232,7 +232,7 @@ tableGenInteraction <- function(graphicData){
     summarise(firstID=first(.data[[visitID]]) %>% as.numeric(),
               {{visitID}}:=str_flatten(.data[[visitID]],', '),
               .groups = 'drop') %>% 
-    arrange(firstID) %>% 
+    # arrange(firstID) %>% 
     select(-firstID) %>% 
     relocate(all_of(visitID),.before=1)
   

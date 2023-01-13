@@ -219,3 +219,5 @@
 218,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_erpos,interaction,table
 219,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_herpos,interaction,table
 220,additional_checks,Q47 Oncologist Treatment Plan,cor_onctrt_tn,interaction,table
+221,additional_checks,TMC ER,tmc_er,interaction,table
+222,additional_checks,TMC ER,tmc_er_percent,interaction,table
