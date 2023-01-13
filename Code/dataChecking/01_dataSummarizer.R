@@ -158,8 +158,12 @@ tableGen <- function(graphicData,graphicStyle,tp,subsection){
   nTableCols <- flxTbl %>% dim() %>% .$widths %>% length()
   
   flxTbl <- flxTbl %>% 
-    bg(i=seq(1,nTableRows,2),bg='grey95') %>% 
+    bg(i=seq(1,nTableRows,2),bg='grey95') 
+  
+  if(graphicStyle!='default'){
+  flxTbl <- flxTbl %>% 
     add_header_row(values=subsection,colwidths = nTableCols)
+  }
   
   return(flxTbl)
 }
@@ -184,7 +188,7 @@ tableGenDefault <- function(graphicData){
   
   flxTbl <- tableData %>% 
     flextable() %>% 
-    width(c(1,2),c(2,5)) 
+    width(c(1,2),c(1.5,5.5)) 
   
   return(flxTbl)
   
@@ -266,6 +270,11 @@ plotGenDefault <- function(graphicData,tp){
   
   tp <- tp[[1]]
   
+  if(tp=='$'){
+    pivotData <- pivotData %>% 
+      mutate(value=factor(value))
+  }
+  
   if(tp%in%c('01','b','$')){
     levels(pivotData$value) <- levels(pivotData$value) %>% 
       str_wrap(11)
@@ -338,8 +347,8 @@ if(FALSE){
     mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) 
   
   
-  dataSummaryOutline %>% 
-    filter(ord%in%c(3,87,90,215,217))%$% 
+  dataSummaryOutline %$% 
+    # filter(ord%in%c(3,87,90,215,217))%$% 
     pmap(list(graphicData,graphicStyle,graphic,tp,subsection),~figureGen(..1,..2,..3,..4,..5))
 
     
