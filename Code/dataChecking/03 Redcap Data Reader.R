@@ -1,6 +1,6 @@
 #Clear existing data and graphics
-rm(list=ls())
-graphics.off()
+# rm(list=ls())
+# graphics.off()
 
 library(tidyverse)
 library(magrittr)

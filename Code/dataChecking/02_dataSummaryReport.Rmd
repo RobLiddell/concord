@@ -68,7 +68,7 @@ subKnit <- function(knitSection,knitSub){
     '',
     '```{r}',
     'figure <- dataSummaryOutline %>% 
-    filter(subsection==knitSub,section==knitSection)%$% 
+    filter(subsection==knitSub,section==knitSection)%$%
     pmap(list(graphicData,graphicStyle,graphic,tp,subsection),~figureGen(..1,..2,..3,..4,..5))',
     '',
     'figure[[1]]',
@@ -84,7 +84,7 @@ sectionKnit <- function(knitSection, knitSub){
     '',
     '```{r, results="asis"}',
     'sectionRes <- knitSub %>%
-    map(knitSection,subKnit)\n',
+    map(~subKnit(knitSection,.x))\n',
     'cat(unlist(sectionRes), sep = "\n")',
     '```',
     ''
@@ -100,7 +100,9 @@ sectionKnit <- function(knitSection, knitSub){
 res <- dataSummaryOutline %>% 
   filter(ord%in%c(3,87,90,215,217)) %>% 
   group_by(section) %>% 
-  summarise(subsection=list(subsection)) %$% 
+  summarise(subsection=list(subsection),
+            ord=first(ord)) %>% 
+  arrange(ord)%$% 
   map2(section,subsection,~sectionKnit(.x,.y))
   
 cat(unlist(res), sep = '\n')
