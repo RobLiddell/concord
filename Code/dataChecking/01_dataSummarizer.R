@@ -185,7 +185,7 @@ tableGenCombined <- function(graphicData){
   flxTbl <- graphicData %>%
     select(-rowID) %>% 
     flextable() %>% 
-    width(c(1:nColumns),width=c(0.5,rep(6.5/(nColumns-1),nColumns-1)))
+    width(c(1:nColumns),width=c(0.75,rep(6.25/(nColumns-1),nColumns-1)))
   
   return(flxTbl)
 }

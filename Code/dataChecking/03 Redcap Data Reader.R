@@ -1,8 +1,5 @@
-#Clear existing data and graphics
-# rm(list=ls())
-# graphics.off()
-
 library(tidyverse)
+library(vroom)
 library(magrittr)
 
 #Read Data Dictionary####

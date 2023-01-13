@@ -98,7 +98,7 @@ sectionKnit <- function(knitSection, knitSub){
 
 
 res <- dataSummaryOutline %>% 
-  filter(ord%in%c(3,87,90,215,217)) %>% 
+  # filter(ord%in%c(3,87,90,215,217)) %>% 
   group_by(section) %>% 
   summarise(subsection=list(subsection),
             ord=first(ord)) %>% 
