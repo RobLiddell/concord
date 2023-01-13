@@ -6,7 +6,8 @@ output:
     toc: TRUE
     toc_depth: 2
 params:
-  summaryFile: Code/dataChecking/01_dataSummarizer.R
+  summarizingFunctions: Code/dataChecking/01_dataSummarizer.R
+  summaryLayout: Code/reportRender/dataSummaryReportOutline.csv
 ---
 
 # Summary
@@ -15,213 +16,44 @@ params:
 
 ```{r setup and establish connections, include=FALSE}
 
+
+
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
 
-source(params$summaryFile)
-library(magrittr)
-```
+source(params$summarizingFunctions)
 
-```{r Basic Data Formatting}
+reportRows <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202,215:220)
 
-
-variableNumbers <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202)
-
-
-dataSummary <- dataDict %>% 
-  slice(variableNumbers) %>%
-  mutate(rep=if_else(is.na(rep),'',source),
-         values=str_remove_all(values,'\"') %>% str_split(','),
-         shortcats=str_remove_all(shortcats,'\"') %>% str_split(',')) %>% 
-  mutate(dat=pmap(list(varnm,rep,tp,values),
-                  ~getData(data=data,variableName=..1,instrumentLabel=..2,dataType=..3,values=..4)))%>% 
-  mutate(dat=pmap(list(dat,tp,varnm,values,shortcats),
-                  ~formatSummaryData(data=..1,dataType = ..2,variableName = ..3, variableValues = ..4,dataLabels = ..5))) %>% 
-  mutate(dat=pmap(list(dat,tp),
-                  ~dataCutting(..1,..2))) %>% 
-  mutate(summaryOutput=pmap(list(dat,myLabel),
-                            ~variableSummarizer(..1,..2)))
-
-
-
-
-
-
+dataSummaryOutline <- read_csv(params$summaryLayout) %>% 
+  slice(reportRows)
 
 ```
 
-```{r Adding Full Data Tables}
+```{r creating summary structure}
 
-#Remove extra rows from dataSummary to only include the first row from
-#each source in replaceWithTable
-replaceWithTable <- c('blood_biomarker_results','fup_mets_treatment')
+dataSummaryOutline %<>%
+  left_join(dataDict %>% select(varnm,rep,source,expandedVarnm,myLabel,shortcats,tp)) %>% 
+  mutate(subsection=if_else(subsection==varnm,myLabel,subsection)) %>% 
+  # select(myLabel) %>% 
+  mutate(dataRows=if_else(is.na(rep),'',source),
+         varnm=expandedVarnm) %>% 
+  select(-rep,-source,-expandedVarnm) %>% 
+  unnest_longer(varnm) %>% 
+  group_by(section,subsection) %>% 
+  summarise(ord=first(ord),
+            varnm=list(varnm),
+            dataRows=first(dataRows),
+            tp=list(tp),
+            shortcats=list(shortcats),
+            myLabel=list(myLabel),
+            graphicStyle=first(graphicStyle),
+            graphic=first(graphic),
+            .groups = 'drop') %>% 
+  arrange(ord) %>% 
+  relocate(ord,.before = 1) %>% 
+  mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y))) %>% 
+  mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) 
 
-dataSummary <- dataSummary %>% 
-  group_by(source) %>% 
-  mutate(rnm=row_number()) %>% 
-  ungroup() %>% 
-  filter(!(source%in%replaceWithTable&rnm>1)) %>% 
-  select(-rnm)
-
-
-
-getDataFullTable <- function(data,dataDict,instrumentLabel){
-  
-  instrumentVariables <- dataDict %>% 
-    filter(source==instrumentLabel) %>%
-    pull(varnm)
-  
-  newVariableNames <- dataDict %>% 
-    filter(source==instrumentLabel) %>%
-    pull(myLabel)
-  
-  renameList <- setNames(instrumentVariables,newVariableNames)
-  
-  returnDat <- data %>% 
-    filter(redcap_repeat_instrument%in%instrumentLabel) %>% 
-    select(ord,vis_id,all_of(instrumentVariables)) %>% 
-    rename(!!renameList)
-  
-  if(instrumentLabel=='blood_biomarker_results'){
-    returnDat <- returnDat %>% 
-      mutate(`Biomarker name`=factor(`Biomarker name`,
-                                     levels=c(1,2,9),labels=c("CA15-3","CEA","Other")))
-  }
-  
-  return(returnDat)
-}
-
-formTable <- function(formData,source){
-  
-  summaryTable <- formData %>%
-    select(-ord) %>% 
-    arrange(vis_id) %>% 
-    mutate(vis_id=as.character(vis_id)) %>% 
-    flextable() %>% 
-    add_header_row(values=source,colwidths = (ncol(formData)-1)) %>% 
-    width(c(1:(ncol(formData)-1)),width=7/(ncol(formData)-1)) %>% 
-    bg(i=seq(1,nrow(formData),2),bg='grey90')
-  
-  return(summaryTable)
-}
-
-
-replacementTables <- dataSummary %>% 
-  filter(source%in%replaceWithTable) %>% 
-  unnest(summaryOutput) %>% 
-  mutate(dat=map(source,
-                 ~getDataFullTable(data,dataDict,.x)),
-         summaryTable=map2(dat,source,
-                           ~formTable(.x,.y)),
-         myLabel='Data Table',
-         graphic='defaultTable') %>% 
-  nest(summaryOutput=c(summaryPlot,summaryTable,lowCountIds))
-
-
-#SummaryOutput=summaryPlot,summaryTable,lowCountIds
-
-dataSummary <- dataSummary %>%
-  rows_update(replacementTables, by='ord')
-
-
-```
-
-
-```{r Adding specific Tables}
-
-compareSurgDates <- function(data){
-  formData <- data %>% 
-    filter(redcap_repeat_instrument=='') %>% 
-    select(vis_id,vis_dobiop,cor_dobiop) %>% 
-    mutate(vis_id=as.character(vis_id),
-           vis_dobiop = as.character(vis_dobiop) %>% ymd(),
-           cor_dobiop = as.character(cor_dobiop) %>% ymd()) %>% 
-    filter(!(vis_dobiop==cor_dobiop)|is.na(vis_dobiop)|is.na(cor_dobiop))
-  
-  
-  
-  summaryTable <- formData %>% 
-    flextable() %>% 
-    add_header_row(values='Surgery Biopsy Date Comparison',colwidths = ncol(formData)) %>% 
-    width(c(1:(ncol(formData))),width=7/(ncol(formData))) %>% 
-    bg(i=seq(1,nrow(formData),2),bg='grey90')
-  
-  return(list(summaryTable))
-}
-
-concatinatedDataTable <- function(data, dataDict){
-  
-  groupedVars <- c('cor_onctrt_asmets','cor_onctrt_erpos','cor_onctrt_herpos','cor_onctrt_tn')
-  groupedSyms <- groupedVars %>% 
-    map(as.symbol)
-  
-  groupedValues <- c(1,2,3)
-  groupedLabels <- c('Yes','No','Unk')
-
-  
-  summaryData <- data %>% 
-    filter(redcap_repeat_instrument=='') %>% 
-    select(vis_id,all_of(groupedVars)) %>% 
-    group_by(!!!groupedSyms) %>%
-    mutate(vis_id=as.character(vis_id)) %>% 
-    summarise(firstID=as.numeric(first(vis_id)),
-              vis_id=str_flatten(vis_id,', '),.groups = 'drop') %>% 
-    ungroup() %>% 
-    arrange(firstID) %>% 
-    select(vis_id,all_of(groupedVars)) %>% 
-    mutate(cor_onctrt_asmets=factor(cor_onctrt_asmets,levels=groupedValues,labels=groupedLabels))
-  
-  
-  renameList <- dataDict %>% 
-    filter(varnm%in%groupedVars)%$%
-    setNames(varnm,myLabel)
-  
-  summaryTable <- summaryData %>% 
-    rename(!!renameList) %>% 
-    flextable() %>% 
-    add_header_row(values='Treatment Plan Details',colwidths = ncol(summaryData)) %>% 
-    width(1,2) %>% 
-    width(c(2:(ncol(summaryData))),width=5/(ncol(summaryData)-1)) %>%
-    bg(i=seq(1,nrow(summaryData),2),bg='grey90')
-  
-  return(list(summaryTable))
-}
-
-
-extra1 <- dataSummary %>% 
-  slice(n()) %>% 
-  mutate(ord=ord+1,
-         rep='',
-         varnm='Surgery_Biopsy_Date_Comparison',
-         source='Additional_Checks',
-         graphic='defaultTable',
-         myLabel='Surgery_Biopsy_Date_Comparison') %>%
-  unnest(summaryOutput) %>% 
-  mutate(summaryTable=compareSurgDates(data)) %>% 
-  nest(summaryOutput=c(summaryPlot,summaryTable,lowCountIds))
-  
-  
-extra2 <- dataSummary %>% 
-  slice(n()) %>% 
-  mutate(ord=ord+2,
-         rep='',
-         varnm='Q47_Oncologist_Treatment_Plan',
-         source='Additional_Checks',
-         graphic='defaultTable',
-         myLabel='Q47_Oncologist_Treatment_Plan') %>%
-  unnest(summaryOutput) %>% 
-  mutate(summaryTable=concatinatedDataTable(data,dataDict)) %>% 
-  nest(summaryOutput=c(summaryPlot,summaryTable,lowCountIds))
-
-dataSummary <- dataSummary %>% 
-  bind_rows(extra1,extra2)
-
-
-dataDict <- dataDict %>% 
-  slice(n()) %>% 
-  mutate(ord=ord+1,
-         source='Additional_Checks',
-         rep=as.character(NA)) %>% 
-  {bind_rows(dataDict,.)}
 ```
 
 
@@ -230,46 +62,29 @@ dataDict <- dataDict %>%
 
 
 
-sectionKnit <- function(x){
+subKnit <- function(knitSection,knitSub){
   knitr::knit_child(text = c(
-    '## `r filter(dataSummary,varnm==x) %>% pull(myLabel)`',
+    '## `r knitSub`',
     '',
     '```{r}',
-    'summaryRow <- dataSummary %>%
-    filter(varnm == x) %>% 
-    unnest(summaryOutput)',
+    'figure <- dataSummaryOutline %>% 
+    filter(subsection==knitSub,section==knitSection)%$% 
+    pmap(list(graphicData,graphicStyle,graphic,tp,subsection),~figureGen(..1,..2,..3,..4,..5))',
     '',
-    'switch(summaryRow$graphic,
-    defaultPlot=summaryRow %>% pull(summaryPlot),
-    defaultTable=summaryRow %>% pull(summaryTable)) %>% 
-    .[[1]]',
+    'figure[[1]]',
     '```',
     ''
   ), envir = environment(), quiet = TRUE)
 }
 
-formKnit <- function(form){
+sectionKnit <- function(knitSection, knitSub){
   # knitr::knit_child(param$knitChildFile, envir = environment(), quiet = TRUE)
   knitr::knit_child(text = c(
-    '```{r}',
-    'isRepeated <- dataDict %>% 
-    filter(source == form) %>% 
-    slice(1) %>% 
-    pull(rep) %>% 
-    {!is.na(.)}',
-    'formName <- form %>% str_replace_all("_"," ") %>% str_to_title()',
-    'if(isRepeated){',
-      'formName <- paste0(formName," (Repeated Form)")',
-    '}',
-    '```',
-    '',
-    '# `r formName`',
+    '# `r knitSection`',
     '',
     '```{r, results="asis"}',
-    'sectionRes <- dataSummary %>%
-    filter(source == form) %>%
-    pull(varnm) %>%
-    map(sectionKnit)\n',
+    'sectionRes <- knitSub %>%
+    map(knitSection,subKnit)\n',
     'cat(unlist(sectionRes), sep = "\n")',
     '```',
     ''
@@ -278,10 +93,15 @@ formKnit <- function(form){
 }
 
 
-res <- dataSummary %>% 
-  distinct(source) %>% 
-  pull(source) %>% 
-  map(formKnit)
+
+
+
+
+res <- dataSummaryOutline %>% 
+  filter(ord%in%c(3,87,90,215,217)) %>% 
+  group_by(section) %>% 
+  summarise(subsection=list(subsection)) %$% 
+  map2(section,subsection,~sectionKnit(.x,.y))
   
 cat(unlist(res), sep = '\n')
 
