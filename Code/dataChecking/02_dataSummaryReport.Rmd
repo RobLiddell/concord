@@ -52,7 +52,10 @@ dataSummaryOutline %<>%
   arrange(ord) %>% 
   relocate(ord,.before = 1) %>% 
   mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y))) %>% 
-  mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) 
+  mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) %>% 
+  mutate(graphicData=pmap(list(graphicData,tp,myLabel),~changeLabels(..1,..2,..3))) %>% 
+  filter(ord%in%c(3,87,90,215,217))
+
 
 ```
 
@@ -98,7 +101,6 @@ sectionKnit <- function(knitSection, knitSub){
 
 
 res <- dataSummaryOutline %>% 
-  # filter(ord%in%c(3,87,90,215,217)) %>% 
   group_by(section) %>% 
   summarise(subsection=list(subsection),
             ord=first(ord)) %>% 

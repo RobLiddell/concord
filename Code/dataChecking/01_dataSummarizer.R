@@ -115,7 +115,21 @@ cutData <- function(graphicData,dataTypeList,graphicStyle,graphic){
   
   
 } 
+#Changing data Labels from varnm to myLabel####
 
+changeLabels <- function(graphicData,dataType,myLabel){
+  if(dataType[[1]]=='01'){
+    return(graphicData)
+  }
+  
+  renamerList <- colnames(graphicData)[-c(1,2)] %>% 
+    set_names(myLabel)
+  
+  graphicData <- graphicData %>% 
+    rename(!!renamerList )
+  
+  return(graphicData)
+}
 #Figure Generating Functions####
 
 figureGen <- function(graphicData,graphicStyle,graphic,dataType,subsection){
