@@ -1,0 +1,118 @@
+---
+title: "Concordance Data Summary as of 2022-12-30"
+output: 
+  word_document:
+    reference_docx: template.docx
+    toc: TRUE
+    toc_depth: 2
+params:
+  summaryLayout: 'Code/reportRender/dataSummaryReportOutline.csv'
+  dataDictionary: 'Data/meta/04 CONCORD REDCap for data management2021-11-26.csv'
+  redcapData: 'Data/raw/01 ConcordanceStudy_DATA_2022-12-30_1413.csv'
+---
+
+# Summary
+
+-   Summary of selected variables found in the Concordance Study for cleaning of data downloaded the 30 of December 2022.
+
+
+
+```{r setup and establish connections, include=FALSE}
+library(REDCapDataSummary)
+library(tidyverse)
+
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
+
+
+dataDict <- readDataDictionary(params$dataDictionary)
+longerDataDict <- expandDataDictionary(dataDict)
+concordData <- readREDCapData(params$redcapData,longerDataDict)
+
+
+reportRows <- c(3:10,24,25:26,30,59,60:70,87:90,91:101,113:143,169:202,215:222)
+
+dataSummaryOutline <- read_csv(params$summaryLayout) %>% 
+  slice(reportRows)
+
+```
+
+```{r creating summary structure}
+
+dataSummaryOutline <- dataSummaryOutline %>%
+  left_join(dataDict %>% select(varnm,rep,source,expandedVarnm,myLabel,shortcats,tp)) %>% 
+  mutate(subsection=if_else(subsection==varnm,myLabel,subsection)) %>% 
+  mutate(dataRows=if_else(is.na(rep),'',source),
+         varnm=expandedVarnm) %>% 
+  select(-rep,-source,-expandedVarnm) %>% 
+  unnest_longer(varnm) %>% 
+  group_by(section,subsection) %>% 
+  summarise(ord=first(ord),
+            varnm=list(varnm),
+            dataRows=first(dataRows),
+            tp=list(tp),
+            shortcats=list(shortcats),
+            myLabel=list(myLabel),
+            graphicStyle=first(graphicStyle),
+            graphic=first(graphic),
+            .groups = 'drop') %>% 
+  arrange(ord) %>% 
+  relocate(ord,.before = 1) %>% 
+  mutate(graphicData=map2(varnm,dataRows,~getData(data,.x,.y))) %>% 
+  mutate(graphicData=pmap(list(graphicData,tp,graphicStyle,graphic),~cutData(..1,..2,..3,..4))) %>% 
+  mutate(graphicData=pmap(list(graphicData,tp,myLabel),~changeLabels(..1,..2,..3))) %>% 
+  mutate(section=str_replace_all(section,'_',' ') %>% str_to_title()) 
+
+
+```
+
+
+
+```{r Document Creation, results='asis'}
+
+
+
+subKnit <- function(knitSection,knitSub){
+  knitr::knit_child(text = c(
+    '## `r knitSub`',
+    '',
+    '```{r}',
+    'figure <- dataSummaryOutline %>% 
+    filter(subsection==knitSub,section==knitSection)%$%
+    pmap(list(graphicData,graphicStyle,graphic,tp,subsection),~figureGen(..1,..2,..3,..4,..5))',
+    '',
+    'figure[[1]]',
+    '```',
+    ''
+  ), envir = environment(), quiet = TRUE)
+}
+
+sectionKnit <- function(knitSection, knitSub){
+  # knitr::knit_child(param$knitChildFile, envir = environment(), quiet = TRUE)
+  knitr::knit_child(text = c(
+    '# `r knitSection`',
+    '',
+    '```{r, results="asis"}',
+    'sectionRes <- knitSub %>%
+    map(~subKnit(knitSection,.x))\n',
+    'cat(unlist(sectionRes), sep = "\n")',
+    '```',
+    ''
+  ), envir = environment(), quiet = TRUE) %>% 
+    return()
+}
+
+
+
+
+
+
+res <- dataSummaryOutline %>% 
+  group_by(section) %>% 
+  summarise(subsection=list(subsection),
+            ord=first(ord)) %>% 
+  arrange(ord)%$% 
+  map2(section,subsection,~sectionKnit(.x,.y))
+  
+cat(unlist(res), sep = '\n')
+
+```
