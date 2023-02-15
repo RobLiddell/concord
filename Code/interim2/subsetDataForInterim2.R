@@ -2,7 +2,7 @@ library(tidyverse)
 library(magrittr)
 library(stringr)
 
-data <- read_tsv('Data/raw/04 ConcordanceStudy_DATA_2023-01-26_1433_LABELS_tabdelimited_withvnms.txt')
+data <- read_tsv('Data/raw/06 ConcordanceStudy_DATA_2023-02-15_1353_LABELS_tabdelimited_withvnms.txt')
 patientsToSelect <- read_tsv('Data/raw/05 interim2studypats tabdelimited.txt')
 columnsToSelect <- c("Study ID number",
                      "Biopsy or Surgery Date",
@@ -57,8 +57,23 @@ extractedData <- data %>%
   bind_rows(as_tibble_row(append(c(pat.id='Patient ID'),columnsToSelect)),.)
 
 extractedData %>% 
-  openxlsx2::write_xlsx("output/interim2/interim2Data.xlsx")
+  openxlsx2::write_xlsx("output/interim2/interim2Data_2023-02-15_1353.xlsx")
   
 
 
-  
+if(FALSE){
+  new <- openxlsx2::read_xlsx("output/interim2/interim2Data_2023-02-15_1353.xlsx")
+  orig <- openxlsx2::read_xlsx("output/interim2/interim2Data.xlsx")
+  diffOrig <- setdiff(orig,new)|>
+    mutate(dataSet='orig')
+  diffNew <- setdiff(new,orig)|>
+    mutate(dataSet='new')
+
+  bind_rows(diffOrig,diffNew)|>
+    arrange(pat.id)|>
+    mutate(dataset=rep(c('orig','new'),3))|>
+    pivot_longer(cols=-c(dataset,pat.id))|>
+    pivot_wider(names_from = dataset,values_from = value)|>
+    filter(row_number()==1|orig!=new|xor(is.na(orig),is.na(new)))
+}
+
